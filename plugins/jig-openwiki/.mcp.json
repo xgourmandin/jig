@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openwiki": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/openwiki-mcp.sh"]
+    }
+  }
+}

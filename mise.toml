@@ -14,10 +14,15 @@ go = "1.27.1"
 "github:archgate/cli" = "0.58.0"
 # Repo map, pilot only: security review required before rollout (see DESIGN.md).
 "ubi:DeusData/codebase-memory-mcp" = "0.11.0"
+# Generated wiki (jig-openwiki): OpenWiki needs Node >= 22.22.
+node = "24.21.0"
+"npm:openwiki" = "0.5.2"
 
 [env]
 # Archgate enables anonymous telemetry by default.
 ARCHGATE_TELEMETRY = "0"
+# OpenWiki enables anonymous telemetry by default.
+OPENWIKI_TELEMETRY_DISABLED = "1"
 
 [tasks.test]
 run = "bats tests/"
@@ -27,5 +32,6 @@ run = [
   "shellcheck -x -P plugins/jig-core/hooks/scripts plugins/*/hooks/scripts/*.sh plugins/*/scripts/*.sh bootstrap/*.sh bootstrap/jig-init",
   "claude plugin validate plugins/jig-core",
   "claude plugin validate plugins/jig-terraform",
+  "claude plugin validate plugins/jig-openwiki",
   "claude plugin validate .",
 ]

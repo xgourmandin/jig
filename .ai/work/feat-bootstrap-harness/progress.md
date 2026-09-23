@@ -60,4 +60,17 @@ Findings:
 - The harness pins both terraform and opentofu, so hooks pick `tofu` inside this repo (mise.toml mentions opentofu). Tests copy fixtures to temp repos, so unaffected.
 Decisions: plugins stay 0.1.0 (unreleased). No `.ai/cache/` (Stop state lives in the plugin data dir).
 Next: human review of the skills (navigate-code, adrs, terraform-conventions); security review of codebase-memory-mcp; OpenWiki verification on a pilot repo (needs repo + ANTHROPIC_API_KEY); then Phase 2.
+(Superseded 2026-09-23: OpenWiki now runs locally, see below.)
 Blockers: marketplace Git URL still undecided (real `claude plugin install` from jig-init untested).
+
+## 2026-09-23 — OpenWiki: CI → local
+Decision: drop the CI job (an Anthropic API key costs too much). OpenWiki runs locally in host-driven mode: Claude Code does the research and writing with the developer's session, and OpenWiki keeps the queue, Claims and finalization. No provider key.
+Done:
+- New opt-in plugin `jig-openwiki` 0.1.0: `.mcp.json` → `scripts/openwiki-mcp.sh` (`openwiki mcp --host claude`, `OPENWIKI_TELEMETRY_DISABLED=1`, clear error if not on PATH); skill `openwiki` = Jig preamble (branch, confirm before init, PR review) + upstream skill from openwiki@0.5.2 (MIT, LICENSE copied). Not `openwiki integrations install` (writes `~/.claude.json` and user skills).
+- `jig-init --openwiki` is now a flag: enables `jig-openwiki@jig` and pins `node` + `npm:openwiki` + telemetry off in the new mise.toml (or prints a todo if mise.toml exists). The opt-in is sticky: later runs keep it when settings enable the plugin or `openwiki/` exists. `bootstrap/templates/ci/` removed.
+- Harness mise.toml pins node 24.21.0 + npm:openwiki 0.5.2; lint validates the new plugin. Tests 83/83, lint green.
+- Smoke (`claude -p --plugin-dir plugins/jig-openwiki` in the tf fixture copy, with mise tools on PATH): MCP connected in ~1.4 s, all 6 `openwiki_*` tools present, skill `jig-openwiki:openwiki` listed, `~/.openwiki` not created.
+Findings:
+- Claude Code truncates the server's MCP instructions (2378 → 2048 chars), so the full skill is needed.
+- The first 3 smoke runs reported the server `failed` (the first because PATH lacked mise tools; the next two unexplained, no MCP lines in the log). Every later run connected. Watch for this in the pilot.
+Next: one full `init` on a pilot repo to judge page quality, time and plan quota used.

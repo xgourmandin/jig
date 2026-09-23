@@ -3,7 +3,7 @@
 # overwrites existing files (settings.json is merged), so every developer can
 # run it after cloning to get the per-developer steps too.
 #
-# Usage: jig-init [--marketplace-url URL|DIR] [--tofu] [--openwiki github|gitlab]
+# Usage: jig-init [--marketplace-url URL|DIR] [--tofu] [--openwiki]
 #                 [--no-install] [repo-dir]
 set -euo pipefail
 
@@ -12,19 +12,18 @@ TEMPLATES="$HARNESS/bootstrap/templates"
 PLACEHOLDER_URL="https://git.example.com/TODO/jig-claude-harness.git"
 
 url="${JIG_MARKETPLACE_URL:-$PLACEHOLDER_URL}"
-tofu=0 openwiki="" install=1 repo="."
+tofu=0 openwiki=0 install=1 repo="."
 while (( $# )); do
   case "$1" in
     --marketplace-url) url="$2"; shift 2 ;;
     --tofu) tofu=1; shift ;;
-    --openwiki) openwiki="$2"; shift 2 ;;
+    --openwiki) openwiki=1; shift ;;
     --no-install) install=0; shift ;;
     -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "jig-init: unknown option $1" >&2; exit 64 ;;
     *) repo="$1"; shift ;;
   esac
 done
-case "$openwiki" in ""|github|gitlab) ;; *) echo "jig-init: --openwiki takes github or gitlab" >&2; exit 64 ;; esac
 command -v jq >/dev/null || { echo "jig-init: jq is required" >&2; exit 69; }
 
 cd "$repo"
@@ -46,6 +45,8 @@ echo "jig-init in $PWD"
 # 1. Stacks -> plugins (only plugins that exist in the marketplace).
 mapfile -t stacks < <(bash "$HARNESS/bootstrap/detect-stack.sh" .)
 [[ -f .opentofu-version ]] && tofu=1
+# Generated wiki: opt-in once, then every developer's run keeps it.
+[[ -d openwiki ]] || jq -e '.enabledPlugins["jig-openwiki@jig"] == true' .claude/settings.json >/dev/null 2>&1 && openwiki=1
 plugins=(jig-core)
 for s in "${stacks[@]}"; do
   if jq -e --arg p "jig-$s" '.plugins[] | select(.name == $p)' "$HARNESS/.claude-plugin/marketplace.json" >/dev/null; then
@@ -55,6 +56,7 @@ for s in "${stacks[@]}"; do
   fi
 done
 has_tf=0; [[ " ${plugins[*]} " == *" jig-terraform "* ]] && has_tf=1
+(( openwiki )) && plugins+=(jig-openwiki)
 say "plugins  ${plugins[*]}"
 
 # 2. .claude/settings.json: merge marketplace + enabled plugins.
@@ -76,6 +78,7 @@ say "merged   $settings"
 # 3. mise.toml: tools the hooks need, pinned to the harness's tested versions.
 if [[ -e mise.toml || -e .mise.toml ]]; then
   say "kept     mise.toml (check it pins the tools listed in the harness mise.toml)"
+  (( openwiki )) && say "todo     pin node and \"npm:openwiki\" in mise.toml, set OPENWIKI_TELEMETRY_DISABLED=\"1\""
 else
   {
     echo "# Tools for this repo, pinned (versions tested by the Jig harness)."
@@ -92,9 +95,15 @@ else
       echo "go = $(ver go)"
       echo "\"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server\" = $(ver '"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server"')"
     fi
+    if (( openwiki )); then
+      echo "# Generated wiki (jig-openwiki), driven locally by Claude Code."
+      echo "node = $(ver node)"
+      echo "\"npm:openwiki\" = $(ver '"npm:openwiki"')"
+    fi
     echo
     echo "[env]"
     echo "ARCHGATE_TELEMETRY = \"0\""
+    (( openwiki )) && echo "OPENWIKI_TELEMETRY_DISABLED = \"1\""
     echo
     echo "[tasks.lint]"
     echo "run = ["
@@ -125,12 +134,10 @@ for line in ".archgate/rules.d.ts" ".codebase-memory/"; do
   grep -qxF "$line" .gitignore || { echo "$line" >>.gitignore; say "ignored  $line"; }
 done
 
-# 6. Optional OpenWiki CI job (opt-in: costs LLM tokens).
-case "$openwiki" in
-  github) place "$TEMPLATES/ci/github-openwiki.yml" .github/workflows/openwiki-update.yml ;;
-  gitlab) place "$TEMPLATES/ci/gitlab-openwiki.yml" ci/openwiki.gitlab-ci.yml
-          say "todo     include ci/openwiki.gitlab-ci.yml from .gitlab-ci.yml and add a schedule with OPENWIKI_RUN=1" ;;
-esac
+# 6. Generated wiki: no CI job (an API key costs too much). Developers refresh
+# it from Claude Code with their own session and review it in a PR.
+(( openwiki )) && [[ ! -d openwiki ]] \
+  && say "todo     ask Claude Code on a branch: \"Initialize this repository's OpenWiki\""
 
 # 7. Per-developer steps.
 if (( install )); then

@@ -6,13 +6,14 @@ This repo is Jig's **Claude Code plugin marketplace**: the shared "company harne
 - `.claude-plugin/marketplace.json`: marketplace catalog (one entry per plugin)
 - `plugins/jig-core/`: always-on core (guardrails, per-branch work state, repo map MCP, workflow skills)
 - `plugins/jig-terraform/`: Terraform/OpenTofu stack (terraform-ls LSP, fmt/tflint/validate/trivy hooks, registry MCP, skills)
+- `plugins/jig-openwiki/`: opt-in generated wiki (OpenWiki MCP driven by Claude Code, run locally)
 - `plugins/jig-{python,typescript,go}/`: to be created (see plan)
 - `bootstrap/`: `jig-init` sets up a consuming repo (uses `detect-stack.sh` and `templates/`)
 - `tests/`: bats tests for every hook script
 - `.ai/work/<branch>/`: work state (spec, plan, progress) — we dogfood the harness here
 
 ## Commands
-- `mise install`: install pinned tools (jq, bats, shellcheck, terraform, opentofu, terraform-ls, tflint, trivy, archgate, codebase-memory-mcp, terraform-mcp-server)
+- `mise install`: install pinned tools (jq, bats, shellcheck, terraform, opentofu, terraform-ls, tflint, trivy, archgate, codebase-memory-mcp, terraform-mcp-server, node, openwiki)
 - `mise run test`: bats tests
 - `mise run lint`: shellcheck + `claude plugin validate`
 - Try a plugin locally without installing: `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform`

@@ -16,6 +16,12 @@
       "source": "./plugins/jig-terraform",
       "version": "0.1.0",
       "description": "Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions and plan review skills, registry docs MCP."
+    },
+    {
+      "name": "jig-openwiki",
+      "source": "./plugins/jig-openwiki",
+      "version": "0.1.0",
+      "description": "Opt-in generated repo wiki: OpenWiki driven locally by Claude Code (no API key, no CI job), reviewed in a PR."
     }
   ]
 }

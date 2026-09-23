@@ -95,24 +95,47 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   [ "$(jq -r .extraKnownMarketplaces.jig.source.path .claude/settings.json)" = "$HARNESS" ]
 }
 
-@test "--openwiki github writes the workflow; gitlab writes the include" {
+@test "--openwiki enables jig-openwiki and pins node + openwiki, no CI job" {
   add main.tf
-  init --openwiki github
-  grep -q 'OPENWIKI_PROVIDER: anthropic' .github/workflows/openwiki-update.yml
-  run init --openwiki gitlab
-  [ -f ci/openwiki.gitlab-ci.yml ]
-  [[ "$output" == *"include ci/openwiki.gitlab-ci.yml"* ]]
+  run init --openwiki
+  [ "$status" -eq 0 ]
+  [ "$(enabled)" = "jig-core@jig,jig-openwiki@jig,jig-terraform@jig" ]
+  want="$(awk -F' = ' '$1=="\"npm:openwiki\""{print $2}' "$HARNESS/mise.toml")"
+  grep -qxF "\"npm:openwiki\" = $want" mise.toml
+  grep -q '^node = "' mise.toml
+  grep -q '^OPENWIKI_TELEMETRY_DISABLED = "1"' mise.toml
+  [[ "$output" == *"Initialize this repository's OpenWiki"* ]]
+  [ ! -e .github ] && [ ! -e ci ]
 }
 
-@test "no OpenWiki job unless asked" {
+@test "OpenWiki opt-in sticks: later runs without the flag keep the plugin" {
+  add main.tf
+  init --openwiki
+  rm mise.toml
+  run init
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"jig-openwiki"* ]]
+  grep -q '"npm:openwiki" = ' mise.toml
+  # Or detected from an existing wiki.
+  mkdir -p "$BATS_TEST_TMPDIR/r2" && cd "$BATS_TEST_TMPDIR/r2" && git init -q
+  add openwiki/index.md
+  run init
+  [[ "$output" == *"jig-openwiki"* ]]
+  [[ "$output" != *"Initialize this repository's OpenWiki"* ]]
+}
+
+@test "no OpenWiki unless asked; existing mise.toml gets a todo" {
   add main.tf
   init
-  [ ! -e .github/workflows/openwiki-update.yml ]
-  [ ! -e ci/openwiki.gitlab-ci.yml ]
+  [[ "$(enabled)" != *openwiki* ]]
+  ! grep -q openwiki mise.toml
+  run init --openwiki
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'todo     pin node and "npm:openwiki"'* ]]
 }
 
 @test "rejects bad options and non-git dirs" {
-  run init --openwiki bitbucket
+  run init --bogus
   [ "$status" -eq 64 ]
   mkdir -p "$BATS_TEST_TMPDIR/plain"
   GIT_CEILING_DIRECTORIES="$BATS_TEST_TMPDIR" run init "$BATS_TEST_TMPDIR/plain"

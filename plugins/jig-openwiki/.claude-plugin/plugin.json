@@ -1,0 +1,8 @@
+{
+  "name": "jig-openwiki",
+  "version": "0.1.0",
+  "description": "Jig generated repo wiki: OpenWiki driven by Claude Code on the developer's machine (the developer's Claude session, no API key), reviewed in a normal PR.",
+  "author": {
+    "name": "Jig Platform Team"
+  }
+}

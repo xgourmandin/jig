@@ -9,12 +9,14 @@
 
 ## Phase 1: core + terraform to pilot quality
 - [ ] PreCompact hook that re-injects plan status (reuse session-start logic) — verified by: bats test
-- [ ] Repo map generator `acme-core/bin/repo-map` (tree + universal-ctags + go list + terraform module index), cached by `git write-tree` hash in `.ai/cache/`, injected (truncated) at SessionStart — verified by: bats test + timing on a medium repo
-- [ ] Short skill teaching navigation order: repo map → LSP → ast-grep → grep — verified by: review
+- [ ] Repo map: add codebase-memory-mcp to acme-core `.mcp.json` (check current install method; binary pinned via consuming repo's mise.toml); check HCL coverage on the tf fixture; SessionStart injects a short summary (with terraform-docs index for Terraform) — verified by: MCP query in smoke test + snapshot bootstrap timing on a medium repo
+- [ ] Short skill teaching navigation order: repo map (graph query) → LSP → ast-grep → grep — verified by: review
+- [ ] ADRs with Archgate: confirm the Claude Code plugin works without `archgate login` (else use CLI only plus a skill); add `archgate check` to the `mise run lint` template; skill/rule telling Claude to read relevant ADRs and propose new ones — verified by: sample ADR with a `.rules.ts` that fails lint on a violating fixture
+- [ ] OpenWiki pilot: CI job template (scheduled, diff-based, opens a PR) with Anthropic provider; opt-in flag in acme-init — verified by: one generated PR on a pilot repo, reviewed for quality and token cost
 - [ ] acme-terraform Stop hook: `terraform validate` (+ checkov or trivy config) on modules changed in this session — verified by: bats test with fixture
 - [ ] Terraform conventions as path-scoped content (decide: skill vs rules template copied by acme-init) — verified by: review
 - [ ] Add HashiCorp terraform-mcp-server to acme-terraform `.mcp.json` (check current install method) — verified by: tool call in smoke test
-- [ ] `bootstrap/acme-init`: detect stack, write `.claude/settings.json`, `mise.toml`, `CLAUDE.md` + `docs/ai/ARCHITECTURE.md` skeletons, add `.ai/cache/` to .gitignore, run `claude plugin install … --scope project` — verified by: bats test on temp repos (tf-only, py-only, mixed)
+- [ ] `bootstrap/acme-init`: detect stack, write `.claude/settings.json`, `mise.toml`, `CLAUDE.md` + `docs/ai/ARCHITECTURE.md` skeletons, `.archgate/adrs/` with a first ADR, codebase-memory snapshot, optional OpenWiki CI job, add `.ai/cache/` to .gitignore, run `claude plugin install … --scope project` — verified by: bats test on temp repos (tf-only, py-only, mixed)
 - [ ] bats tests for session-start, require-progress, tf-post-edit, detect-stack — verified by: `mise run test`
 
 ## Phase 2: language plugins

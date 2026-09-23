@@ -9,7 +9,8 @@
 - `claude plugin validate` passes for every plugin; `mise run test` and `mise run lint` are green.
 - In a sample repo, loading the plugins shows: session context from `.ai/work/<branch>/`; blocked `terraform apply`; fmt/lint feedback after editing a `.tf`; LSP go-to-definition working for Terraform and one language.
 - `acme-init` on a fresh repo detects the stack and writes `.claude/settings.json`, `mise.toml`, `CLAUDE.md` skeleton, and installs plugins at project scope.
-- The repo map is generated in < 5 s on a medium repo and cached.
+- The repo map (codebase-memory-mcp) is queryable over MCP and bootstraps from a committed snapshot in < 5 s on a medium repo.
+- `archgate check` runs in `mise run lint` and fails on an ADR violation.
 - Every hook has bats tests (allow + block cases).
 
 ## Constraints

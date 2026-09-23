@@ -8,5 +8,5 @@ for bin in terraform terraform-ls tflint; do
   command -v "$bin" >/dev/null || missing+=("$bin")
 done
 if (( ${#missing[@]} )); then
-  echo "ACME terraform: missing tools: ${missing[*]}. Tell the user to run 'mise install' in this repo. Code intelligence and edit checks are degraded until then."
+  echo "Jig terraform: missing tools: ${missing[*]}. Tell the user to run 'mise install' in this repo. Code intelligence and edit checks are degraded until then."
 fi

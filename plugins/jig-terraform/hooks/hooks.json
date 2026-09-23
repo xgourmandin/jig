@@ -1,5 +1,5 @@
 {
-  "description": "ACME Terraform hooks: format and lint every edited .tf file",
+  "description": "Jig Terraform hooks: format and lint every edited .tf file",
   "hooks": {
     "PostToolUse": [
       {

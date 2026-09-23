@@ -1,4 +1,4 @@
-# acme-terraform
+# jig-terraform
 
 Enable in repos that contain Terraform.
 

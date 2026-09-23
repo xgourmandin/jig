@@ -8,10 +8,10 @@ source "$(dirname "$0")/lib.sh"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel)"
 branch="$(git rev-parse --abbrev-ref HEAD)"
-dir="$(acme_work_dir)"
+dir="$(jig_work_dir)"
 rel="${dir#"$root"/}"
 
-echo "## ACME harness: session context"
+echo "## Jig harness: session context"
 echo "Branch: $branch"
 
 if [[ -d "$dir" ]]; then

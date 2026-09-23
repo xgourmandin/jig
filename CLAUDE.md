@@ -1,13 +1,13 @@
-# ACME Claude harness — instructions for Claude Code
+# Jig Claude harness — instructions for Claude Code
 
-This repo is ACME's **Claude Code plugin marketplace**: the shared "company harness" every ACME repo uses for AI-assisted coding (software and Terraform). Read @docs/DESIGN.md for the why. "acme" is a placeholder company name until renamed (see plan).
+This repo is Jig's **Claude Code plugin marketplace**: the shared "company harness" every Jig repo uses for AI-assisted coding (software and Terraform). Read @docs/DESIGN.md for the why. The marketplace Git URL is not decided yet (placeholder in README.md).
 
 ## Layout
 - `.claude-plugin/marketplace.json`: marketplace catalog (one entry per plugin)
-- `plugins/acme-core/`: always-on core (guardrails, per-branch work state, workflow skills)
-- `plugins/acme-terraform/`: Terraform stack (terraform-ls LSP, fmt/tflint hooks, plan review)
-- `plugins/acme-{python,typescript,go}/`: to be created (see plan)
-- `bootstrap/`: scripts that set up a consuming repo (`detect-stack.sh`, later `acme-init`)
+- `plugins/jig-core/`: always-on core (guardrails, per-branch work state, workflow skills)
+- `plugins/jig-terraform/`: Terraform stack (terraform-ls LSP, fmt/tflint hooks, plan review)
+- `plugins/jig-{python,typescript,go}/`: to be created (see plan)
+- `bootstrap/`: scripts that set up a consuming repo (`detect-stack.sh`, later `jig-init`)
 - `tests/`: bats tests for every hook script
 - `.ai/work/<branch>/`: work state (spec, plan, progress) — we dogfood the harness here
 
@@ -15,7 +15,7 @@ This repo is ACME's **Claude Code plugin marketplace**: the shared "company harn
 - `mise install`: install pinned tools (jq, bats, shellcheck, terraform, terraform-ls, tflint)
 - `mise run test`: bats tests
 - `mise run lint`: shellcheck + `claude plugin validate`
-- Try a plugin locally without installing: `claude --plugin-dir ./plugins/acme-core --plugin-dir ./plugins/acme-terraform`
+- Try a plugin locally without installing: `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform`
 
 ## Rules for this repo
 - Hooks are **deterministic bash + jq**, not prompt hooks. They read the hook JSON on stdin; block with exit 2 + stderr (PreToolUse/PostToolUse) or `{"decision":"block","reason":...}` (Stop).

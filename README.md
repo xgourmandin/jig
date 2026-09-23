@@ -1,21 +1,21 @@
-# acme-claude-harness
+# jig-claude-harness
 
-ACME's shared Claude Code harness, distributed as a plugin marketplace. See `docs/DESIGN.md`.
+Jig's shared Claude Code harness, distributed as a plugin marketplace. See `docs/DESIGN.md`.
 
 ## Use in a repo (target state)
 ```json
 // <repo>/.claude/settings.json
 {
   "extraKnownMarketplaces": {
-    "acme": { "source": { "source": "git", "url": "https://git.acme.internal/platform/acme-claude-harness.git" } }
+    "jig": { "source": { "source": "git", "url": "https://git.example.com/TODO/jig-claude-harness.git" } }
   },
   "enabledPlugins": {
-    "acme-core@acme": true,
-    "acme-terraform@acme": true
+    "jig-core@jig": true,
+    "jig-terraform@jig": true
   }
 }
 ```
-Then `mise install` and `claude plugin install acme-core@acme --scope project` (to be automated by `bootstrap/acme-init`).
+Then `mise install` and `claude plugin install jig-core@jig --scope project` (to be automated by `bootstrap/jig-init`).
 
 ## Develop
-`mise install && mise run test && mise run lint`, then `claude --plugin-dir ./plugins/acme-core --plugin-dir ./plugins/acme-terraform` in a sample repo.
+`mise install && mise run test && mise run lint`, then `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform` in a sample repo.

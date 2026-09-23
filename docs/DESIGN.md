@@ -1,4 +1,4 @@
-# ACME Claude Code harness — design
+# Jig Claude Code harness — design
 
 ## Goals
 1. One shared, versioned harness instead of personal, non-shareable setups.
@@ -8,16 +8,16 @@
 5. The harness must: remember where development stands, share repo-structure knowledge, and navigate code without grepping the whole repo.
 
 ## Architecture
-**Distribution.** This repo is a private Claude Code plugin marketplace. Each consuming repo commits `.claude/settings.json` with `extraKnownMarketplaces` (pointing here) and `enabledPlugins` (core + its stacks). Project type = which plugins are enabled. New language = new plugin folder. Note: plugins from an external marketplace enabled only in project settings still need `claude plugin install --scope project` per developer, so `acme-init` must run it. Admins can restrict marketplaces via managed settings (`strictKnownMarketplaces`) and enable auto-update per marketplace.
+**Distribution.** This repo is a private Claude Code plugin marketplace. Each consuming repo commits `.claude/settings.json` with `extraKnownMarketplaces` (pointing here) and `enabledPlugins` (core + its stacks). Project type = which plugins are enabled. New language = new plugin folder. Note: plugins from an external marketplace enabled only in project settings still need `claude plugin install --scope project` per developer, so `jig-init` must run it. Admins can restrict marketplaces via managed settings (`strictKnownMarketplaces`) and enable auto-update per marketplace.
 
 **Plugins.**
 | Plugin | Contents |
 |---|---|
-| acme-core | Guardrails (PreToolUse), session context (SessionStart), progress enforcement (Stop), PreCompact re-injection, repo map (codebase-memory-mcp), Archgate ADR checks, skills: start-work, handoff (later: spec, implement, review) |
-| acme-terraform | terraform-ls via `.lsp.json`, fmt+tflint on edit, validate/checkov on Stop, tf-plan-review skill, HashiCorp Terraform MCP server for registry docs |
-| acme-python | depends on official `pyright-lsp`; ruff format/check on edit; type check + tests on Stop |
-| acme-typescript | depends on official `typescript-lsp`; biome or eslint/prettier on edit; tsc + tests on Stop |
-| acme-go | depends on official `gopls-lsp`; gofmt/goimports on edit; golangci-lint + go test on Stop |
+| jig-core | Guardrails (PreToolUse), session context (SessionStart), progress enforcement (Stop), PreCompact re-injection, repo map (codebase-memory-mcp), Archgate ADR checks, skills: start-work, handoff (later: spec, implement, review) |
+| jig-terraform | terraform-ls via `.lsp.json`, fmt+tflint on edit, validate/checkov on Stop, tf-plan-review skill, HashiCorp Terraform MCP server for registry docs |
+| jig-python | depends on official `pyright-lsp`; ruff format/check on edit; type check + tests on Stop |
+| jig-typescript | depends on official `typescript-lsp`; biome or eslint/prettier on edit; tsc + tests on Stop |
+| jig-go | depends on official `gopls-lsp`; gofmt/goimports on edit; golangci-lint + go test on Stop |
 
 **Tool installation.** Plugins do not install binaries. Every consuming repo has a `mise.toml` pinning its tools. Hooks call the same task runner as CI (`mise run lint`, lefthook/pre-commit) so the AI is held to exactly the CI standard.
 

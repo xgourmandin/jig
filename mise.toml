@@ -1,19 +1,20 @@
 # Tools needed to develop and test the harness itself.
-# TODO(bootstrap): pin exact versions once validated.
+# Exact versions; bump deliberately (validated 2026-09-23).
 [tools]
-jq = "latest"
-shellcheck = "latest"
-bats = "latest"
-terraform = "latest"
-terraform-ls = "latest"
-tflint = "latest"
+jq = "1.8.2"
+shellcheck = "0.11.0"
+bats = "1.14.0"
+terraform = "1.16.3"
+terraform-ls = "0.39.0"
+tflint = "0.64.0"
 
 [tasks.test]
 run = "bats tests/"
 
 [tasks.lint]
 run = [
-  "shellcheck -x -P plugins/acme-core/hooks/scripts plugins/*/hooks/scripts/*.sh bootstrap/*.sh",
-  "claude plugin validate plugins/acme-core",
-  "claude plugin validate plugins/acme-terraform",
+  "shellcheck -x -P plugins/jig-core/hooks/scripts plugins/*/hooks/scripts/*.sh bootstrap/*.sh",
+  "claude plugin validate plugins/jig-core",
+  "claude plugin validate plugins/jig-terraform",
+  "claude plugin validate .",
 ]

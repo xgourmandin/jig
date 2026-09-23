@@ -1,0 +1,6 @@
+{
+  "name": "jig-terraform",
+  "version": "0.1.0",
+  "description": "Jig Terraform stack: terraform-ls code intelligence, fmt/tflint feedback on every edit, plan review skill.",
+  "author": { "name": "Jig Platform Team" }
+}

@@ -4,7 +4,7 @@
 set -uo pipefail
 input="$(cat)"
 
-block() { echo "ACME guardrail: $1" >&2; exit 2; }
+block() { echo "Jig guardrail: $1" >&2; exit 2; }
 
 # Fail closed for shell commands if jq is missing: a guardrail that silently
 # disappears is worse than one that asks for its dependency.

@@ -1,5 +1,5 @@
 {
-  "description": "ACME core hooks: guardrails, session context, progress enforcement",
+  "description": "Jig core hooks: guardrails, session context, progress enforcement",
   "hooks": {
     "PreToolUse": [
       {

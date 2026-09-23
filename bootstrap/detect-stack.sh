@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deterministically detect which ACME stack plugins a repo needs.
+# Deterministically detect which Jig stack plugins a repo needs.
 # Usage: detect-stack.sh [repo-dir]  -> prints one stack per line
 set -euo pipefail
 cd "${1:-.}"

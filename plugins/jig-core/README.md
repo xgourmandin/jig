@@ -1,6 +1,6 @@
-# acme-core
+# jig-core
 
-Always enabled in every ACME repo.
+Always enabled in every Jig repo.
 
 | Component | File | What it does |
 |---|---|---|

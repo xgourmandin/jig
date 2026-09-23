@@ -25,7 +25,7 @@ if [[ "$file" == *.tf ]] && command -v tflint >/dev/null; then
 fi
 
 if [[ -n "$problems" ]]; then
-  printf 'ACME terraform checks for %s:\n%s' "$file" "$problems" >&2
+  printf 'Jig terraform checks for %s:\n%s' "$file" "$problems" >&2
   exit 2
 fi
 exit 0

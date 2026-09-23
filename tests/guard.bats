@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Run: bats tests/
-GUARD="$BATS_TEST_DIRNAME/../plugins/acme-core/hooks/scripts/guard.sh"
+GUARD="$BATS_TEST_DIRNAME/../plugins/jig-core/hooks/scripts/guard.sh"
 
 bash_call() { jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}' | bash "$GUARD"; }
 read_call() { jq -nc --arg p "$1" '{tool_name:"Read",tool_input:{file_path:$p}}' | bash "$GUARD"; }

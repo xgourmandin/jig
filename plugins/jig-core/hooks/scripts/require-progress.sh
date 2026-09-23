@@ -10,7 +10,7 @@ input="$(cat)"
 [[ "$(jq -r '.stop_hook_active // false' <<<"$input")" == "true" ]] && exit 0
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
-dir="$(acme_work_dir)"
+dir="$(jig_work_dir)"
 [[ -d "$dir" ]] || exit 0
 root="$(git rev-parse --show-toplevel)"
 rel="${dir#"$root"/}"

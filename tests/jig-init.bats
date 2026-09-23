@@ -49,12 +49,60 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   [ -f .archgate/adrs/GEN-001-record-decisions-as-adrs.md ]
 }
 
-@test "stack without a plugin yet: noted, core only" {
+@test "go repo: core + go, go tooling and lint, go pinned once" {
   add go.mod
   run init
   [ "$status" -eq 0 ]
-  [[ "$output" == *"jig-go does not exist yet"* ]]
-  [ "$(enabled)" = "jig-core@jig" ]
+  [ "$(enabled)" = "jig-core@jig,jig-go@jig" ]
+  grep -q '^golangci-lint = "' mise.toml
+  grep -q '^"go:golang.org/x/tools/gopls" = "' mise.toml
+  grep -q '^"go:golang.org/x/tools/cmd/goimports" = "' mise.toml
+  grep -q '"golangci-lint run ./..."' mise.toml
+  grep -qF '"test -z \"$(gofmt -l .)\""' mise.toml
+  [ "$(grep -c '^go = ' mise.toml)" -eq 1 ]
+  ! grep -q terraform mise.toml
+}
+
+@test "ts repo with biome: biome pins and lint, tsc when tsconfig exists" {
+  add package.json '{"name":"x"}'
+  add biome.json '{}'
+  add tsconfig.json '{}'
+  run init
+  [ "$status" -eq 0 ]
+  [ "$(enabled)" = "jig-core@jig,jig-typescript@jig" ]
+  grep -q '^"npm:typescript-language-server" = "' mise.toml
+  grep -q '^"npm:@biomejs/biome" = "' mise.toml
+  grep -q '^node = "' mise.toml
+  ! grep -q 'npm:eslint' mise.toml
+  grep -q '"biome ci ."' mise.toml
+  grep -q '"tsc --noEmit"' mise.toml
+  [[ "$output" == *"so the TypeScript LSP finds tsserver"* ]]
+}
+
+@test "ts repo with eslint + prettier: eslint and prettier, no biome" {
+  add package.json '{"name":"x","devDependencies":{"prettier":"3"}}'
+  add eslint.config.js 'export default []'
+  run init
+  grep -q '^"npm:eslint" = "' mise.toml
+  grep -q '^"npm:prettier" = "' mise.toml
+  ! grep -q 'biome' mise.toml
+  grep -q '"eslint ."' mise.toml
+  grep -q '"prettier --check ."' mise.toml
+  ! grep -q '"tsc --noEmit"' mise.toml
+}
+
+@test "python + typescript: node pinned once" {
+  add app/main.py
+  add web/package.json '{"name":"x"}'
+  init
+  [ "$(grep -c '^node = ' mise.toml)" -eq 1 ]
+}
+
+@test "go + terraform: go pinned once" {
+  add go.mod
+  add infra/main.tf
+  init
+  [ "$(grep -c '^go = ' mise.toml)" -eq 1 ]
 }
 
 @test "mixed repo: terraform plugin enabled alongside core" {

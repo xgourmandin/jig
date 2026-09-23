@@ -31,6 +31,18 @@
       "source": "./plugins/jig-python",
       "version": "0.1.0",
       "description": "Python stack: pyright code intelligence (pyright-lsp), ruff format + lint on edit, pyright + pytest on Stop, conventions skill."
+    },
+    {
+      "name": "jig-go",
+      "source": "./plugins/jig-go",
+      "version": "0.1.0",
+      "description": "Go stack: gopls code intelligence (gopls-lsp), goimports on edit, golangci-lint + go test on Stop, conventions skill."
+    },
+    {
+      "name": "jig-typescript",
+      "source": "./plugins/jig-typescript",
+      "version": "0.1.0",
+      "description": "TypeScript stack: code intelligence (typescript-lsp), biome or prettier + eslint on edit (detected per repo), tsc + vitest/npm test on Stop, conventions skill."
     }
   ]
 }

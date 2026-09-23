@@ -22,8 +22,8 @@
 
 ## Phase 2: language plugins
 - [x] jig-python (depends on pyright-lsp; ruff on edit; pyright + pytest on Stop; python-conventions skill; jig-init pins uv/ruff/pyright) — verified by: `tests/fixtures/py-sample`, `tests/python-hooks.bats` (22), `tests/jig-init.bats`, smoke (`claude -p`: LSP definition, ruff reformat on edit, Stop blocked on pyright error, fixed)
-- [ ] jig-typescript (depends on typescript-lsp; linter/formatter on edit; tsc + tests on Stop) — verified by: fixture + bats
-- [ ] jig-go (depends on gopls-lsp; gofmt/goimports on edit; golangci-lint + go test on Stop) — verified by: fixture + bats
+- [x] jig-typescript (depends on typescript-lsp; biome or prettier+eslint on edit, detected per repo; tsc + vitest/`<pm> test` on Stop; typescript-conventions skill; jig-init pins per detected linter) — verified by: `tests/fixtures/ts-sample`, `tests/typescript-hooks.bats` (35), `tests/jig-init.bats`, smoke (`claude -p`: LSP definition, biome reformat on edit, LSP TS2322 diagnostic, Stop blocked on tsc error, fixed)
+- [x] jig-go (depends on gopls-lsp; goimports on edit; golangci-lint + go test on Stop for edited packages; go-conventions skill; jig-init pins golangci-lint/gopls/goimports) — verified by: `tests/fixtures/go-sample`, `tests/go-hooks.bats` (25), smoke (`claude -p`: LSP definition, goimports reformat on edit, Stop blocked on failing go test, fixed)
 - [ ] Hooks call the consuming repo's task runner when present (`mise run lint`), falling back to direct tool calls — verified by: bats
 
 ## Phase 3: distribution and pilot

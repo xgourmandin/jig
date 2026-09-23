@@ -22,6 +22,18 @@ uv = "0.12.17"
 ruff = "0.16.8"
 "npm:pyright" = "1.1.414"
 "pipx:pytest" = "9.1.1"
+# TypeScript stack (jig-typescript). typescript 6, not 7: typescript-language-server
+# needs tsserver, which TypeScript 7 (native) no longer ships.
+"npm:typescript" = "6.0.3"
+"npm:typescript-language-server" = "6.0.0"
+"npm:@biomejs/biome" = "2.5.14"
+"npm:eslint" = "10.11.0"
+"npm:prettier" = "3.9.8"
+"npm:vitest" = "5.0.1"
+# Go stack (jig-go): gopls for the gopls-lsp plugin, goimports on edit, golangci-lint v2 on Stop.
+golangci-lint = "2.13.2"
+"go:golang.org/x/tools/gopls" = "0.23.0"
+"go:golang.org/x/tools/cmd/goimports" = "0.50.0"
 
 [env]
 # Archgate enables anonymous telemetry by default.
@@ -39,5 +51,7 @@ run = [
   "claude plugin validate plugins/jig-terraform",
   "claude plugin validate plugins/jig-openwiki",
   "claude plugin validate plugins/jig-python",
+  "claude plugin validate plugins/jig-go",
+  "claude plugin validate plugins/jig-typescript",
   "claude plugin validate .",
 ]

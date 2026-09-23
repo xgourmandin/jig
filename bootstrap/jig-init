@@ -57,6 +57,20 @@ for s in "${stacks[@]}"; do
 done
 has_tf=0; [[ " ${plugins[*]} " == *" jig-terraform "* ]] && has_tf=1
 has_py=0; [[ " ${plugins[*]} " == *" jig-python "* ]] && has_py=1
+has_go=0; [[ " ${plugins[*]} " == *" jig-go "* ]] && has_go=1
+has_ts=0; [[ " ${plugins[*]} " == *" jig-typescript "* ]] && has_ts=1
+# TypeScript formatter/linter, detected per repo (same rules as the hooks).
+ts_lint="" ts_prettier=0
+if (( has_ts )); then
+  if compgen -G 'biome.json*' >/dev/null; then ts_lint=biome
+  elif compgen -G 'eslint.config.*' >/dev/null || compgen -G '.eslintrc*' >/dev/null \
+       || jq -e 'has("eslintConfig")' package.json >/dev/null 2>&1; then ts_lint=eslint
+  fi
+  if compgen -G '.prettierrc*' >/dev/null || compgen -G 'prettier.config.*' >/dev/null \
+     || jq -e 'has("prettier") or ((.devDependencies // {}) + (.dependencies // {}) | has("prettier"))' package.json >/dev/null 2>&1; then
+    ts_prettier=1
+  fi
+fi
 (( openwiki )) && plugins+=(jig-openwiki)
 say "plugins  ${plugins[*]}"
 
@@ -93,8 +107,15 @@ else
       echo "terraform-ls = $(ver terraform-ls)"
       echo "tflint = $(ver tflint)"
       echo "trivy = $(ver trivy)"
-      echo "go = $(ver go)"
       echo "\"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server\" = $(ver '"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server"')"
+    fi
+    # Go builds terraform-mcp-server and runs the Go stack.
+    (( has_tf || has_go )) && echo "go = $(ver go)"
+    if (( has_go )); then
+      echo "golangci-lint = $(ver golangci-lint)"
+      echo "# gopls is used by the gopls-lsp plugin."
+      echo "\"go:golang.org/x/tools/gopls\" = $(ver '"go:golang.org/x/tools/gopls"')"
+      echo "\"go:golang.org/x/tools/cmd/goimports\" = $(ver '"go:golang.org/x/tools/cmd/goimports"')"
     fi
     if (( has_py )); then
       echo "uv = $(ver uv)"
@@ -102,7 +123,15 @@ else
       echo "# pyright ships pyright-langserver, used by the pyright-lsp plugin."
       echo "\"npm:pyright\" = $(ver '"npm:pyright"')"
     fi
-    (( has_py || openwiki )) && echo "node = $(ver node)"
+    if (( has_ts )); then
+      echo "# typescript-lsp uses the project's node_modules/typescript (<= 6); this is a fallback for tsc."
+      echo "\"npm:typescript\" = $(ver '"npm:typescript"')"
+      echo "\"npm:typescript-language-server\" = $(ver '"npm:typescript-language-server"')"
+      [[ "$ts_lint" == biome ]] && echo "\"npm:@biomejs/biome\" = $(ver '"npm:@biomejs/biome"')"
+      [[ "$ts_lint" == eslint ]] && echo "\"npm:eslint\" = $(ver '"npm:eslint"')"
+      (( ts_prettier )) && echo "\"npm:prettier\" = $(ver '"npm:prettier"')"
+    fi
+    (( has_py || has_ts || openwiki )) && echo "node = $(ver node)"
     if (( openwiki )); then
       echo "# Generated wiki (jig-openwiki), driven locally by Claude Code."
       echo "\"npm:openwiki\" = $(ver '"npm:openwiki"')"
@@ -126,6 +155,16 @@ else
       echo "  \"ruff check .\","
       echo "  \"pyright\","
     fi
+    if (( has_ts )); then
+      [[ "$ts_lint" == biome ]] && echo "  \"biome ci .\","
+      [[ "$ts_lint" == eslint ]] && echo "  \"eslint .\","
+      (( ts_prettier )) && echo "  \"prettier --check .\","
+      [[ -f tsconfig.json ]] && echo "  \"tsc --noEmit\","
+    fi
+    if (( has_go )); then
+      echo "  \"test -z \\\"\$(gofmt -l .)\\\"\","
+      echo "  \"golangci-lint run ./...\","
+    fi
     echo "]"
   } >mise.toml
   say "created  mise.toml"
@@ -135,6 +174,8 @@ fi
 place "$TEMPLATES/CLAUDE.md" CLAUDE.md
 place "$TEMPLATES/docs-ai/ARCHITECTURE.md" docs/ai/ARCHITECTURE.md
 (( has_tf )) && place "$TEMPLATES/claude-rules/terraform.md" .claude/rules/terraform.md
+(( has_ts )) && [[ ! -d node_modules ]] \
+  && say "note     run your package install (npm ci / pnpm i) so the TypeScript LSP finds tsserver"
 
 # 5. ADRs (Archgate CLI; its Claude plugin is not used).
 place "$TEMPLATES/archgate/adrs/GEN-001-record-decisions-as-adrs.md" .archgate/adrs/GEN-001-record-decisions-as-adrs.md

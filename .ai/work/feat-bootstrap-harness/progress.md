@@ -95,3 +95,41 @@ Findings:
 - ruff creates `.ruff_cache/` even with `--no-cache`, so we redirect `RUFF_CACHE_DIR` instead.
 Next: jig-typescript (typescript-lsp; biome or eslint+prettier detected per repo; tsc + vitest/npm test on Stop), then jig-go, then the task-runner fallback.
 Blockers: none (marketplace URL still undecided).
+
+## 2026-09-23 — claude (Claude Code, Phase 2: jig-go, built by a subagent)
+Done:
+- New plugin `jig-go` 0.1.0 (depends on `gopls-lsp@claude-plugins-official`):
+  - PostToolUse `go-post-edit.sh`: `goimports -w` (fallback `gofmt -w`) from the module root; syntax errors → exit 2 (file untouched). The file is recorded for Stop. No golangci-lint on edit: it type-checks whole packages (seconds per edit) and gopls already reports compile/vet errors after each edit.
+  - Stop `go-stop-check.sh`: per module (nearest go.mod, not above the git root), on the edited packages only: `golangci-lint run` (repo `.golangci.yml`; `go vet` if golangci-lint is missing), then `go test`. `-mod=readonly` (`-mod=vendor` with vendor/modules.txt) on the command line, so go.mod/go.sum never change. Blocks once. A config golangci-lint cannot load (v1 format) and missing tools only warn.
+  - SessionStart `check-tools.sh` (go, gopls, goimports, golangci-lint).
+  - Path-scoped `go-conventions` skill.
+- Repo stays clean: Go caches in GOCACHE, `GOLANGCI_LINT_CACHE` in the plugin data dir, no test binaries or coverage.
+- Fixture `tests/fixtures/go-sample` (no dependencies, golangci-lint v2 config); `tests/go-hooks.bats` (25 tests).
+- Harness mise.toml pins golangci-lint 2.13.2, gopls 0.23.0 and goimports 0.50.0 (go 1.27.1 already there). jig-init pins them for Go repos (go written once for tf + go) and adds a gofmt check + `golangci-lint run ./...` to lint (root module only; multi-module repos add their own entries).
+- Smoke (`claude -p --plugin-dir plugins/jig-go`, `gopls-lsp` installed at project scope in a throwaway copy): LSP goToDefinition on `ErrDivByZero` → `calc.go:7:5`; goimports reformatted the badly formatted `Add`; the Stop hook blocked once on the failing `TestAdd`; Claude fixed it. Uninstalled afterwards.
+Findings:
+- golangci-lint v2 exits 1 for issues (compile errors appear as `typecheck`), 3 for an unloadable config (v1 config: "unsupported version of the configuration"), 5 for a dir without Go files.
+- **The fix after a block is never re-checked in the same stop cycle** (all stack plugins): the stop with `stop_hook_active=true` is skipped, so a wrong fix ends a `-p` run unchecked. Open design question.
+- mise's aqua backend can time out (3 s) fetching golangci-lint from api.github.com; `MISE_FETCH_REMOTE_VERSIONS_TIMEOUT=30s` fixes it.
+- Possible follow-up: jig-init could place a starter `.golangci.yml` (v2) for Go repos that have none.
+
+## 2026-09-23 — claude (Claude Code, Phase 2: jig-typescript, built by a subagent)
+Done:
+- New plugin `jig-typescript` 0.1.0 (depends on `typescript-lsp@claude-plugins-official`):
+  - PostToolUse `ts-post-edit.sh` on .ts/.tsx/.mts/.cts/.js/.jsx/.mjs/.cjs. Linter detected per repo (nearest config): `biome.json` → `biome check --write` (errors block, warnings don't); eslint config → `prettier --write` (only if the repo uses prettier) + `eslint --fix`; else prettier if used. Repo ignore files apply. If eslint itself crashes, the user gets a message and the edit is not blocked. The file is recorded for Stop.
+  - Stop `ts-stop-check.sh`: `tsc --noEmit` per nearest tsconfig.json (errors only), then tests per package: `vitest run --no-cache --passWithNoTests` when vitest is used, else `npm|pnpm|yarn test` / `bun run test` (from the lockfile or `packageManager`) when `scripts.test` is not npm's stub. `CI=true`. Blocks once. Never installs packages.
+  - SessionStart `check-tools.sh`: missing tools, missing node_modules, missing tsserver.
+  - Path-scoped `typescript-conventions` skill.
+- Tools resolve from `node_modules/.bin` (package, then ancestors) before PATH.
+- Repo stays clean: `--tsBuildInfoFile` in the plugin data dir (`--noEmit` still writes tsbuildinfo for incremental/composite projects), vitest `--no-cache`.
+- Fixture `tests/fixtures/ts-sample` (biome, vitest); bats toggles it to eslint(+prettier). Offline: setup symlinks node_modules/{typescript,vitest} to the mise installs. 35 tests.
+- Harness mise.toml pins npm:typescript 6.0.3, typescript-language-server 6.0.0, @biomejs/biome 2.5.14, eslint 10.11.0, prettier 3.9.8, vitest 5.0.1.
+- jig-init: detects biome vs eslint and prettier at init. It pins typescript-language-server + typescript, plus biome, or eslint (+ prettier), and adds `biome ci .`, or `eslint .` (+ `prettier --check .`), plus `tsc --noEmit` when tsconfig.json exists. node is pinned once. It reminds the user to run the package install.
+- Smoke (`claude -p --plugin-dir plugins/jig-typescript`, typescript-lsp installed at project scope): LSP goToDefinition OK; biome reformatted the edit; the LSP flagged TS2322 right after the edit; Stop blocked once with the tsc error; Claude fixed it. Uninstalled afterwards.
+Decision (subagent, accepted by lead): in eslint repos, prettier runs only when the repo uses it, so we never impose a style on eslint-formatted repos.
+Findings:
+- **TypeScript 7 ships no tsserver**, and typescript-language-server 6.0.0 (official typescript-lsp) only looks in the project's `node_modules/typescript`. So the LSP needs TS ≤ 6 installed in the project. We pin 6.0.3. Revisit when the official plugin moves to TS 7's native LSP.
+- eslint 10 dropped `.eslintrc*`: legacy-config repos need their own older eslint in node_modules (resolved first); otherwise the user gets a message.
+- vitest writes `node_modules/.vite/vitest/.../results.json` unless run with `--no-cache` (not controllable when the repo's `npm test` calls vitest).
+Next: task-runner fallback (last Phase 2 item); decide on re-checking fixes when `stop_hook_active` (see jig-go findings).
+Blockers: none (marketplace URL still undecided).

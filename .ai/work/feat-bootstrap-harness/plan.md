@@ -8,16 +8,17 @@
 - [x] Manual smoke test with `claude --plugin-dir` in the fixture: SessionStart context appears, `terraform apply` is blocked, editing a .tf triggers fmt/tflint feedback, LSP go-to-definition works on a module reference — verified by: notes in progress.md
 
 ## Phase 1: core + terraform to pilot quality
-- [ ] PreCompact hook that re-injects plan status (reuse session-start logic) — verified by: bats test
-- [ ] Repo map: add codebase-memory-mcp to jig-core `.mcp.json` (check current install method; binary pinned via consuming repo's mise.toml); check HCL coverage on the tf fixture; SessionStart injects a short summary (with terraform-docs index for Terraform) — verified by: MCP query in smoke test + snapshot bootstrap timing on a medium repo
-- [ ] Short skill teaching navigation order: repo map (graph query) → LSP → ast-grep → grep — verified by: review
-- [ ] ADRs with Archgate: confirm the Claude Code plugin works without `archgate login` (else use CLI only plus a skill); add `archgate check` to the `mise run lint` template; skill/rule telling Claude to read relevant ADRs and propose new ones — verified by: sample ADR with a `.rules.ts` that fails lint on a violating fixture
-- [ ] OpenWiki pilot: CI job template (scheduled, diff-based, opens a PR) with Anthropic provider; opt-in flag in jig-init — verified by: one generated PR on a pilot repo, reviewed for quality and token cost
-- [ ] jig-terraform Stop hook: `terraform validate` (+ checkov or trivy config) on modules changed in this session — verified by: bats test with fixture
-- [ ] Terraform conventions as path-scoped content (decide: skill vs rules template copied by jig-init) — verified by: review
-- [ ] Add HashiCorp terraform-mcp-server to jig-terraform `.mcp.json` (check current install method) — verified by: tool call in smoke test
-- [ ] `bootstrap/jig-init`: detect stack, write `.claude/settings.json`, `mise.toml`, `CLAUDE.md` + `docs/ai/ARCHITECTURE.md` skeletons, `.archgate/adrs/` with a first ADR, codebase-memory snapshot, optional OpenWiki CI job, add `.ai/cache/` to .gitignore, run `claude plugin install … --scope project` — verified by: bats test on temp repos (tf-only, py-only, mixed)
-- [ ] bats tests for session-start, require-progress, tf-post-edit, detect-stack — verified by: `mise run test`
+- [x] Re-inject plan status after compaction: session-start.sh prints the current plan phase when `source` is `compact` (PreCompact stdout does not reach Claude, per current docs) — verified by: `tests/session-start.bats`
+- [x] Repo map: codebase-memory-mcp 0.11.0 in jig-core `.mcp.json` (locked-down wrapper, mise `ubi:` pin); HCL works on the tf fixture, so no terraform-docs index; SessionStart one-line status — verified by: smoke test (index + search_graph + module call via MCP in `claude -p`), `tests/repo-map.bats`. Snapshot bootstrap NOT met: restore from `graph.db.zst` not observed, so the pilot doesn't commit snapshots (fast index of a 5k-file repo ≈ 10 s wall)
+- [ ] Security review of codebase-memory-mcp before rollout beyond the pilot (binary provenance/checksums, network behaviour, daemon) — verified by: written review
+- [x] Short skill teaching navigation order: repo map (graph query) → LSP → ast-grep → grep (`jig-core:navigate-code`) — verified by: review (pending human), skill loads in smoke test
+- [x] ADRs with Archgate: plugin needs `archgate login`, so CLI only (`github:archgate/cli` 0.58.0, telemetry off) + `jig-core:adrs` skill; `archgate check` in the jig-init lint template; templates GEN-001 and TF-001 (git module sources pin `?ref=`) — verified by: `tests/archgate.bats` (fails on violation, passes when pinned)
+- [ ] OpenWiki pilot: CI job templates for GitHub and GitLab (weekly, `--update`, Anthropic, telemetry off, opens PR/MR) + `jig-init --openwiki` — DONE; still to verify: one generated PR on a pilot repo, reviewed for quality and token cost (needs a pilot repo + API key)
+- [x] jig-terraform Stop hook: offline `init -backend=false` + `validate` + `trivy config` (HIGH/CRITICAL) on modules edited this session, terraform or tofu, repo left untouched — verified by: `tests/terraform-hooks.bats`
+- [x] Terraform conventions as path-scoped content: both. Company-wide in skill `jig-terraform:terraform-conventions` (`paths:`; plugins can't ship rules), repo-specific in `.claude/rules/terraform.md` from jig-init — verified by: review (pending human)
+- [x] HashiCorp terraform-mcp-server 1.3.0 in jig-terraform `.mcp.json` (no release binaries: mise `go:` backend; `registry` toolset only) — verified by: `get_latest_provider_version` in smoke test
+- [x] `bootstrap/jig-init`: detect stack, merge `.claude/settings.json`, `mise.toml`, `CLAUDE.md` + `docs/ai/ARCHITECTURE.md` skeletons, rules, `.archgate/adrs/`, optional OpenWiki CI job, `mise install`, repo-map UI off, `claude plugin install … --scope project` (no snapshot, no `.ai/cache/`: unused) — verified by: `tests/jig-init.bats` (tf-only, py-only, mixed, idempotent). Real plugin install untested until the marketplace URL exists
+- [x] bats tests for require-progress, tf-post-edit, detect-stack — verified by: `mise run test` (80 tests)
 
 ## Phase 2: language plugins
 - [ ] jig-python (depends on pyright-lsp; ruff on edit; type check + pytest on Stop) — verified by: fixture + bats

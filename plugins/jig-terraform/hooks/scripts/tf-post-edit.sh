@@ -1,19 +1,30 @@
 #!/usr/bin/env bash
 # PostToolUse: after Claude edits a .tf/.tfvars file, auto-format it and lint
 # its module directory. Exit 2 + stderr feeds problems back to Claude.
+# Also records the module dir so the Stop hook can validate it.
 set -uo pipefail
+# shellcheck source=lib.sh
+source "$(dirname "$0")/lib.sh"
 input="$(cat)"
 file="$(jq -r '.tool_input.file_path // empty' <<<"$input")"
 [[ "$file" =~ \.(tf|tfvars)$ ]] || exit 0
 [[ -f "$file" ]] || exit 0
 
-dir="$(dirname -- "$file")"
+dir="$(cd "$(dirname -- "$file")" && pwd)"
 problems=""
 
-# 1. terraform fmt: fixes formatting in place; reports syntax errors.
-if command -v terraform >/dev/null; then
-  if ! out="$(terraform fmt -no-color "$file" 2>&1 >/dev/null)"; then
-    problems+=$'terraform fmt failed (likely HCL syntax error):\n'"$out"$'\n'
+# 0. Remember this module for validation at Stop (see tf-stop-validate.sh).
+if [[ "$file" == *.tf ]]; then
+  sid="$(jq -r '.session_id // empty' <<<"$input")"
+  state="$(jig_tf_session_file "$sid")"
+  mkdir -p "$(dirname "$state")"
+  grep -qxF "$dir" "$state" 2>/dev/null || printf '%s\n' "$dir" >>"$state"
+fi
+
+# 1. terraform/tofu fmt: fixes formatting in place; reports syntax errors.
+if tf="$(jig_tf_bin)"; then
+  if ! out="$("$tf" fmt -no-color "$file" 2>&1 >/dev/null)"; then
+    problems+="$tf fmt failed (likely HCL syntax error):"$'\n'"$out"$'\n'
   fi
 fi
 

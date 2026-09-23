@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# jig-init: set up a repo for the Jig Claude Code harness. Idempotent: never
+# overwrites existing files (settings.json is merged), so every developer can
+# run it after cloning to get the per-developer steps too.
+#
+# Usage: jig-init [--marketplace-url URL|DIR] [--tofu] [--openwiki github|gitlab]
+#                 [--no-install] [repo-dir]
+set -euo pipefail
+
+HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMPLATES="$HARNESS/bootstrap/templates"
+PLACEHOLDER_URL="https://git.example.com/TODO/jig-claude-harness.git"
+
+url="${JIG_MARKETPLACE_URL:-$PLACEHOLDER_URL}"
+tofu=0 openwiki="" install=1 repo="."
+while (( $# )); do
+  case "$1" in
+    --marketplace-url) url="$2"; shift 2 ;;
+    --tofu) tofu=1; shift ;;
+    --openwiki) openwiki="$2"; shift 2 ;;
+    --no-install) install=0; shift ;;
+    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) echo "jig-init: unknown option $1" >&2; exit 64 ;;
+    *) repo="$1"; shift ;;
+  esac
+done
+case "$openwiki" in ""|github|gitlab) ;; *) echo "jig-init: --openwiki takes github or gitlab" >&2; exit 64 ;; esac
+command -v jq >/dev/null || { echo "jig-init: jq is required" >&2; exit 69; }
+
+cd "$repo"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "jig-init: $PWD is not a git repository" >&2; exit 65; }
+cd "$(git rev-parse --show-toplevel)"
+
+say()  { printf '  %s\n' "$*"; }
+# Copy a template unless the target exists.
+place() {
+  local src="$1" dst="$2"
+  if [[ -e "$dst" ]]; then say "kept     $dst"; return; fi
+  mkdir -p "$(dirname "$dst")"; cp "$src" "$dst"; say "created  $dst"
+}
+# Pinned version of a tool, taken from the harness's own mise.toml.
+ver() { awk -F' = ' -v k="$1" '$1==k {print $2; exit}' "$HARNESS/mise.toml"; }
+
+echo "jig-init in $PWD"
+
+# 1. Stacks -> plugins (only plugins that exist in the marketplace).
+mapfile -t stacks < <(bash "$HARNESS/bootstrap/detect-stack.sh" .)
+[[ -f .opentofu-version ]] && tofu=1
+plugins=(jig-core)
+for s in "${stacks[@]}"; do
+  if jq -e --arg p "jig-$s" '.plugins[] | select(.name == $p)' "$HARNESS/.claude-plugin/marketplace.json" >/dev/null; then
+    plugins+=("jig-$s")
+  else
+    say "note     stack '$s' detected, but jig-$s does not exist yet"
+  fi
+done
+has_tf=0; [[ " ${plugins[*]} " == *" jig-terraform "* ]] && has_tf=1
+say "plugins  ${plugins[*]}"
+
+# 2. .claude/settings.json: merge marketplace + enabled plugins.
+if [[ -d "$url" ]]; then
+  source_json="$(jq -n --arg p "$(cd "$url" && pwd)" '{source: "directory", path: $p}')"
+else
+  source_json="$(jq -n --arg u "$url" '{source: "git", url: $u}')"
+fi
+mkdir -p .claude
+settings=.claude/settings.json
+[[ -f "$settings" ]] || echo '{}' >"$settings"
+tmp="$(mktemp)"
+jq --argjson src "$source_json" --args '
+  .extraKnownMarketplaces.jig = {source: $src}
+  | .enabledPlugins = ((.enabledPlugins // {}) + ($ARGS.positional | map({key: "\(.)@jig", value: true}) | from_entries))
+' "${plugins[@]}" <"$settings" >"$tmp" && mv "$tmp" "$settings"
+say "merged   $settings"
+
+# 3. mise.toml: tools the hooks need, pinned to the harness's tested versions.
+if [[ -e mise.toml || -e .mise.toml ]]; then
+  say "kept     mise.toml (check it pins the tools listed in the harness mise.toml)"
+else
+  {
+    echo "# Tools for this repo, pinned (versions tested by the Jig harness)."
+    echo "[tools]"
+    echo "jq = $(ver jq)"
+    echo "\"github:archgate/cli\" = $(ver '"github:archgate/cli"')"
+    echo "# Repo map, pilot only: security review required before rollout."
+    echo "\"ubi:DeusData/codebase-memory-mcp\" = $(ver '"ubi:DeusData/codebase-memory-mcp"')"
+    if (( has_tf )); then
+      if (( tofu )); then echo "opentofu = $(ver opentofu)"; else echo "terraform = $(ver terraform)"; fi
+      echo "terraform-ls = $(ver terraform-ls)"
+      echo "tflint = $(ver tflint)"
+      echo "trivy = $(ver trivy)"
+      echo "go = $(ver go)"
+      echo "\"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server\" = $(ver '"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server"')"
+    fi
+    echo
+    echo "[env]"
+    echo "ARCHGATE_TELEMETRY = \"0\""
+    echo
+    echo "[tasks.lint]"
+    echo "run = ["
+    echo "  \"archgate check\","
+    if (( has_tf )); then
+      tf=terraform; (( tofu )) && tf=tofu
+      echo "  \"$tf fmt -check -recursive\","
+      echo "  \"tflint --recursive\","
+      echo "  \"trivy config --quiet --skip-check-update --severity HIGH,CRITICAL --exit-code 1 .\","
+    fi
+    echo "]"
+  } >mise.toml
+  say "created  mise.toml"
+fi
+
+# 4. Shared knowledge skeletons.
+place "$TEMPLATES/CLAUDE.md" CLAUDE.md
+place "$TEMPLATES/docs-ai/ARCHITECTURE.md" docs/ai/ARCHITECTURE.md
+(( has_tf )) && place "$TEMPLATES/claude-rules/terraform.md" .claude/rules/terraform.md
+
+# 5. ADRs (Archgate CLI; its Claude plugin is not used).
+place "$TEMPLATES/archgate/adrs/GEN-001-record-decisions-as-adrs.md" .archgate/adrs/GEN-001-record-decisions-as-adrs.md
+if (( has_tf )); then
+  for f in "$TEMPLATES"/archgate/adrs/TF-001-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
+fi
+touch .gitignore
+for line in ".archgate/rules.d.ts" ".codebase-memory/"; do
+  grep -qxF "$line" .gitignore || { echo "$line" >>.gitignore; say "ignored  $line"; }
+done
+
+# 6. Optional OpenWiki CI job (opt-in: costs LLM tokens).
+case "$openwiki" in
+  github) place "$TEMPLATES/ci/github-openwiki.yml" .github/workflows/openwiki-update.yml ;;
+  gitlab) place "$TEMPLATES/ci/gitlab-openwiki.yml" ci/openwiki.gitlab-ci.yml
+          say "todo     include ci/openwiki.gitlab-ci.yml from .gitlab-ci.yml and add a schedule with OPENWIKI_RUN=1" ;;
+esac
+
+# 7. Per-developer steps.
+if (( install )); then
+  if command -v mise >/dev/null; then mise trust -q >/dev/null 2>&1 || true; mise install || say "warn     mise install failed"; fi
+  # Pilot lock-down: no local HTTP UI for the repo map daemon.
+  # Through mise when present: freshly installed tools are not on PATH yet.
+  run=(); command -v mise >/dev/null && run=(mise exec --)
+  "${run[@]}" codebase-memory-mcp config set ui_enabled false >/dev/null 2>&1 \
+    && say "set      codebase-memory-mcp ui_enabled=false (per user)" || true
+  if [[ "$url" == "$PLACEHOLDER_URL" ]]; then
+    say "skipped  plugin install: the marketplace URL is still a placeholder (use --marketplace-url)"
+  elif ! command -v claude >/dev/null; then
+    say "skipped  plugin install: claude not on PATH"
+  else
+    claude plugin marketplace add "$url" >/dev/null 2>&1 || true
+    for p in "${plugins[@]}"; do
+      if claude plugin install "$p@jig" --scope project >/dev/null 2>&1; then say "installed $p@jig"; else say "warn     could not install $p@jig"; fi
+    done
+  fi
+fi
+
+echo "Done. Review and commit: .claude/ mise.toml CLAUDE.md docs/ai/ .archgate/ .gitignore"
+echo "Claude Code must start with mise tools on PATH (mise activate in your shell)."

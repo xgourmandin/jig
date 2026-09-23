@@ -1,6 +1,8 @@
 {
   "name": "jig-core",
   "version": "0.1.0",
-  "description": "Jig harness core: guardrails, per-branch work state, workflow skills.",
-  "author": { "name": "Jig Platform Team" }
+  "description": "Jig harness core: guardrails, per-branch work state, repo map (code graph MCP), ADR and navigation skills.",
+  "author": {
+    "name": "Jig Platform Team"
+  }
 }

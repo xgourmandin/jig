@@ -20,8 +20,8 @@
 
 ## Open questions (ask the human before the related phase)
 1. ~~Company name~~ → **jig** (answered 2026-09-23). Git URL that will host this marketplace: **not decided yet** (placeholder in README.md).  *(Phase 0)*
-2. Terraform or OpenTofu (or both)? Which cloud providers? Are read-only credentials available for `plan`, or must we use `-backend=false`?  *(Phase 1)*
-3. Existing CI/pre-commit setup to align with: lefthook, pre-commit, or none?  *(Phase 1)*
-4. Ticket system (Jira, Linear, GitHub/GitLab issues) for linking work state.  *(Phase 1)*
+2. ~~Terraform or OpenTofu? Credentials?~~ → **both** Terraform and OpenTofu (detect per repo; guard both binaries). **Offline checks only**: hooks use `init -backend=false` + `validate` + static scanners; `plan` stays in CI (answered 2026-09-23). Cloud providers: not asked, not needed for offline checks.  *(Phase 1)*
+3. ~~Pre-commit tooling~~ → **none yet**; CI runs `mise run lint`. Pick lefthook as the default when we add git hooks (answered 2026-09-23).  *(Phase 1)*
+4. ~~Ticket system~~ → **skip for now**; no ticket linking in Phase 1 (answered 2026-09-23).  *(Phase 1)*
 5. Python: pyright or mypy? uv or poetry? TypeScript: biome or eslint+prettier? Test runners?  *(Phase 2)*
 6. Claude plan (Team/Enterprise) and whether admins will push managed settings.  *(Phase 3)*

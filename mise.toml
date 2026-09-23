@@ -5,15 +5,26 @@ jq = "1.8.2"
 shellcheck = "0.11.0"
 bats = "1.14.0"
 terraform = "1.16.3"
+opentofu = "1.12.6"
 terraform-ls = "0.39.0"
 tflint = "0.64.0"
+trivy = "0.74.0"
+go = "1.27.1"
+"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server" = "1.3.0"
+"github:archgate/cli" = "0.58.0"
+# Repo map, pilot only: security review required before rollout (see DESIGN.md).
+"ubi:DeusData/codebase-memory-mcp" = "0.11.0"
+
+[env]
+# Archgate enables anonymous telemetry by default.
+ARCHGATE_TELEMETRY = "0"
 
 [tasks.test]
 run = "bats tests/"
 
 [tasks.lint]
 run = [
-  "shellcheck -x -P plugins/jig-core/hooks/scripts plugins/*/hooks/scripts/*.sh bootstrap/*.sh",
+  "shellcheck -x -P plugins/jig-core/hooks/scripts plugins/*/hooks/scripts/*.sh plugins/*/scripts/*.sh bootstrap/*.sh bootstrap/jig-init",
   "claude plugin validate plugins/jig-core",
   "claude plugin validate plugins/jig-terraform",
   "claude plugin validate .",

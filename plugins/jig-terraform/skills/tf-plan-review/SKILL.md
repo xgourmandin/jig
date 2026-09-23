@@ -7,7 +7,7 @@ description: Review a Terraform plan for risk before a human or CI applies it. U
 
 Never run `apply`. Produce a plan and review it.
 
-1. In the module directory, run `terraform init -input=false` (use `-backend=false` if no read-only credentials are available and say so), then `terraform plan -input=false -out=tfplan` and `terraform show -json tfplan > tfplan.json`.
+1. Prefer the plan CI produced: ask for the plan JSON (`show -json` output) from the pipeline. Jig sessions have no cloud credentials, so a local plan cannot see real state. Only if the user asks for a local plan anyway: run `init -backend=false -input=false`, then `plan -input=false -refresh=false -out=tfplan` and `show -json tfplan > tfplan.json`, and say that it compares against empty state. Use `tofu` instead of `terraform` in OpenTofu repos.
 2. Summarize with `jq` over `.resource_changes[]`, grouping by action (`create`, `update`, `delete`, `delete+create` = replace). Count each.
 3. Flag as HIGH risk: any delete or replace of stateful resources (databases, buckets, disks, KMS keys, DNS zones), IAM/policy changes, security-group or firewall rules opening `0.0.0.0/0`, changes to `prevent_destroy` or `lifecycle` blocks.
 4. For each replace, name the attribute that forces replacement (`.change.replace_paths`).

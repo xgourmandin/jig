@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "repo-map": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/repo-map-mcp.sh"],
+      "env": { "CBM_ALLOWED_ROOT": "${CLAUDE_PROJECT_DIR}" }
+    }
+  }
+}

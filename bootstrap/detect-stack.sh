@@ -8,5 +8,5 @@ has() { grep -Eq "$1" <<<"$files"; }
 has '(^|/)pyproject\.toml$|(^|/)requirements[^/]*\.txt$|(^|/)setup\.py$|\.py$' && echo python
 has '(^|/)package\.json$|\.tsx?$' && echo typescript
 has '(^|/)go\.mod$' && echo go
-has '\.tf$' && echo terraform
+has '\.(tf|tofu)$' && echo terraform
 exit 0

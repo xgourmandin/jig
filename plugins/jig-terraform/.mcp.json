@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "terraform-registry": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/terraform-mcp.sh"]
+    }
+  }
+}

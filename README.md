@@ -15,7 +15,9 @@ Jig's shared Claude Code harness, distributed as a plugin marketplace. See `docs
   }
 }
 ```
-Then `mise install` and `claude plugin install jig-core@jig --scope project` (to be automated by `bootstrap/jig-init`).
+`bootstrap/jig-init [--marketplace-url URL|DIR] [--tofu] [--openwiki github|gitlab] [--no-install] [repo]` writes this plus `mise.toml`, `CLAUDE.md`, `docs/ai/ARCHITECTURE.md`, `.claude/rules/terraform.md`, first ADRs in `.archgate/adrs/`, and optionally an OpenWiki CI job. It never overwrites existing files. Every developer runs it once after cloning: it also runs `mise install` and `claude plugin install … --scope project`.
+
+Claude Code must start with the mise tools on PATH (`mise activate` in your shell).
 
 ## Develop
 `mise install && mise run test && mise run lint`, then `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform` in a sample repo.

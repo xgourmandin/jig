@@ -33,3 +33,31 @@ Findings for Phase 1:
 - The PostToolUse matcher lists `MultiEdit`, which may no longer be a tool; harmless.
 Next: Phase 1. First ask open questions 2–4 (Terraform vs OpenTofu, clouds and credentials; lefthook/pre-commit; ticket system).
 Blockers: none.
+
+## 2026-09-23 — claude (Claude Code, Phase 1 start)
+Done:
+- Open questions 2–4 answered and recorded in spec.md: Terraform **and** OpenTofu; offline checks only (`init -backend=false`, validate, scanners; plan in CI); no pre-commit tooling yet (lefthook default later); no ticket linking.
+- Task 1 (plan re-injection after compaction). Current hooks docs: PreCompact can only block compaction, and its stdout goes to the debug log, not to Claude. So there is no PreCompact hook. Instead, session-start.sh reads `source` from stdin, and on `compact` it also prints the plan.md section holding the first open task. SessionStart has no matcher, so it already fires after compaction. Also fixed: it only asks to read spec.md/plan.md when they exist. New `tests/session-start.bats` (8 tests); `mise run test` 21/21, `mise run lint` green. DESIGN.md updated.
+Decisions: jig-core stays at 0.1.0 (unreleased, same as Phase 0).
+Note: the rtk hook rewrite of `mise run test`/`mise run lint` prints "bash: command not found:"; run them with `rtk proxy mise run …`.
+Next: repo map (codebase-memory-mcp in jig-core `.mcp.json`). Guard/fmt/validate hooks must handle `tofu` as well as `terraform` (the guard already does).
+Blockers: none.
+
+## 2026-09-23 — claude (Claude Code, Phase 1 build)
+Done:
+- Decisions from the human: codebase-memory-mcp as a locked-down pilot; terraform-mcp-server via `go install` through mise; CI templates for both GitHub and GitLab.
+- jig-terraform: `lib.sh` picks `terraform` or `tofu` per repo. New Stop hook `tf-stop-validate.sh`: PostToolUse records edited module dirs in `${CLAUDE_PLUGIN_DATA}`. Stop runs offline `init -backend=false` + `validate`, then `trivy config` (HIGH/CRITICAL, embedded checks, no download), and blocks once. `.terraform` goes to the data dir and the lock file is restored. Also added: path-scoped `terraform-conventions` skill, tf-plan-review now prefers the CI plan, and terraform-mcp-server (`registry` toolset) via `scripts/terraform-mcp.sh`.
+- jig-core: repo-map MCP (`scripts/repo-map-mcp.sh`, `CBM_ALLOWED_ROOT` = project), `repo-map-status.sh` (SessionStart, one CLI call), skills `navigate-code` and `adrs`.
+- bootstrap: `jig-init` + templates (CLAUDE.md, ARCHITECTURE.md, terraform rules, GEN-001/TF-001 ADRs, OpenWiki GitHub/GitLab jobs). `detect-stack.sh` detects `.tofu` files.
+- Harness mise.toml now pins opentofu, trivy, go, terraform-mcp-server, archgate, codebase-memory-mcp; `[env] ARCHGATE_TELEMETRY=0`.
+- Tests: 80/80 (`tests/{session-start,terraform-hooks,repo-map,archgate,jig-init,require-progress,detect-stack}.bats`); lint green.
+- Smoke (`claude -p` with both plugin dirs in a copy of the tf fixture): session context + repo-map hint injected; both MCP servers connected; indexed the fixture and `search_graph` found `full_name` in both files with lines and the `naming` module call; registry returned hashicorp/random 3.9.1; all four new skills listed.
+Findings:
+- PreCompact output never reaches Claude (current docs). Plan re-injection is SessionStart `compact`.
+- codebase-memory-mcp: HCL works. Snapshot restore from a committed `graph.db.zst` not observed (clone reindexed fully, with path-derived or fixed `--name`), so no committed snapshot in the pilot. Every CLI call has a ~5 s floor (daemon handshake). Its daemon serves an HTTP UI on 127.0.0.1:9749 by default (jig-init disables it per user) and exits when idle. No phone-home URLs found in the binary. Test indexes deleted from `~/.cache/codebase-memory-mcp`.
+- Archgate: the npm package is a shim that downloads an unversioned binary to `~/.archgate/bin` (hung here), so we pin the GitHub release instead. Telemetry defaults to on: this machine's `~/.archgate/config.json` was created with telemetry true by that first run. Set to false afterwards and removed the partial binary. `archgate init --editor claude` writes `.claude/settings.local.json` for its plugin agent, so jig-init writes `.archgate/` itself.
+- OpenWiki sends CI telemetry by default (templates set `OPENWIKI_TELEMETRY_DISABLED=1`) and maintains its own block in CLAUDE.md/AGENTS.md.
+- The harness pins both terraform and opentofu, so hooks pick `tofu` inside this repo (mise.toml mentions opentofu). Tests copy fixtures to temp repos, so unaffected.
+Decisions: plugins stay 0.1.0 (unreleased). No `.ai/cache/` (Stop state lives in the plugin data dir).
+Next: human review of the skills (navigate-code, adrs, terraform-conventions); security review of codebase-memory-mcp; OpenWiki verification on a pilot repo (needs repo + ANTHROPIC_API_KEY); then Phase 2.
+Blockers: marketplace Git URL still undecided (real `claude plugin install` from jig-init untested).

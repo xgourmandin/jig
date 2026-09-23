@@ -1,12 +1,19 @@
 # jig-terraform
 
-Enable in repos that contain Terraform.
+Enable in repos that contain Terraform or OpenTofu.
 
 | Component | File | What it does |
 |---|---|---|
 | LSP | `.lsp.json` | Wires `terraform-ls` into Claude Code's LSP tool (definitions, references, diagnostics) |
-| Edit checks (PostToolUse) | `hooks/scripts/tf-post-edit.sh` | `terraform fmt` + `tflint` on every edited `.tf`, problems fed back to Claude |
+| Edit checks (PostToolUse) | `hooks/scripts/tf-post-edit.sh` | `fmt` + `tflint` on every edited `.tf`, problems fed back to Claude; records the module for Stop |
+| Validate (Stop) | `hooks/scripts/tf-stop-validate.sh` | Offline `init -backend=false` + `validate` on modules edited this session; blocks once on errors. `.terraform/` goes to the plugin data dir and the lock file is restored, so the repo is untouched |
 | Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing |
-| Skill | `skills/tf-plan-review` | Plan-only risk review |
+| Skill | `skills/terraform-conventions` | Jig conventions, loaded automatically for `.tf`/`.tfvars` files |
+| Skill | `skills/tf-plan-review` | Plan-only risk review (prefers the CI plan) |
+| Registry docs (MCP) | `.mcp.json`, `scripts/terraform-mcp.sh` | HashiCorp terraform-mcp-server, `registry` toolset only (public provider/module docs, no HCP/TFE operations, no token) |
 
-Requires `terraform`, `terraform-ls`, `tflint`, `jq` on PATH (install via the repo's `mise.toml`).
+**Terraform or OpenTofu.** Hooks use `tofu` when the repo has `.opentofu-version` or pins `opentofu` in `mise.toml`, else `terraform`. Override with `JIG_TF_BIN`.
+
+**Repo-specific conventions** go in the consuming repo's `.claude/rules/terraform.md` (with `paths: ["**/*.tf"]` frontmatter), written by `jig-init`. Plugins cannot ship rules, so shared conventions live in the skill.
+
+Requires `terraform` or `tofu`, `terraform-ls`, `tflint`, `jq` on PATH; optional `trivy`, `terraform-mcp-server` (all via the repo's `mise.toml`, written by `jig-init`).

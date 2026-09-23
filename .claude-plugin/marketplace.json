@@ -1,19 +1,21 @@
 {
   "name": "jig",
-  "owner": { "name": "Jig Platform Team" },
+  "owner": {
+    "name": "Jig Platform Team"
+  },
   "description": "Jig company harness for Claude Code: shared rules, workflow state, guardrails and per-stack tooling.",
   "plugins": [
     {
       "name": "jig-core",
       "source": "./plugins/jig-core",
       "version": "0.1.0",
-      "description": "Always-on core: guardrails, per-branch work state, workflow skills."
+      "description": "Always-on core: guardrails, per-branch work state, repo map, ADR and navigation skills."
     },
     {
       "name": "jig-terraform",
       "source": "./plugins/jig-terraform",
       "version": "0.1.0",
-      "description": "Terraform stack: terraform-ls code intelligence, fmt/tflint on edit, plan review skill."
+      "description": "Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions and plan review skills, registry docs MCP."
     }
   ]
 }

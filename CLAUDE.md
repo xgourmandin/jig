@@ -4,18 +4,20 @@ This repo is Jig's **Claude Code plugin marketplace**: the shared "company harne
 
 ## Layout
 - `.claude-plugin/marketplace.json`: marketplace catalog (one entry per plugin)
-- `plugins/jig-core/`: always-on core (guardrails, per-branch work state, workflow skills)
-- `plugins/jig-terraform/`: Terraform stack (terraform-ls LSP, fmt/tflint hooks, plan review)
+- `plugins/jig-core/`: always-on core (guardrails, per-branch work state, repo map MCP, workflow skills)
+- `plugins/jig-terraform/`: Terraform/OpenTofu stack (terraform-ls LSP, fmt/tflint/validate/trivy hooks, registry MCP, skills)
 - `plugins/jig-{python,typescript,go}/`: to be created (see plan)
-- `bootstrap/`: scripts that set up a consuming repo (`detect-stack.sh`, later `jig-init`)
+- `bootstrap/`: `jig-init` sets up a consuming repo (uses `detect-stack.sh` and `templates/`)
 - `tests/`: bats tests for every hook script
 - `.ai/work/<branch>/`: work state (spec, plan, progress) — we dogfood the harness here
 
 ## Commands
-- `mise install`: install pinned tools (jq, bats, shellcheck, terraform, terraform-ls, tflint)
+- `mise install`: install pinned tools (jq, bats, shellcheck, terraform, opentofu, terraform-ls, tflint, trivy, archgate, codebase-memory-mcp, terraform-mcp-server)
 - `mise run test`: bats tests
 - `mise run lint`: shellcheck + `claude plugin validate`
 - Try a plugin locally without installing: `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform`
+- Set up a sample repo: `bootstrap/jig-init --marketplace-url . --no-install <repo>`
+- The rtk hook breaks `mise run …` output; use `rtk proxy mise run test`
 
 ## Rules for this repo
 - Hooks are **deterministic bash + jq**, not prompt hooks. They read the hook JSON on stdin; block with exit 2 + stderr (PreToolUse/PostToolUse) or `{"decision":"block","reason":...}` (Stop).

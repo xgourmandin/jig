@@ -1,6 +1,6 @@
 {
   "name": "jig-go",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Jig Go stack: gopls code intelligence (via gopls-lsp), goimports on edit, golangci-lint + go test on Stop, conventions skill.",
   "author": {
     "name": "Jig Platform Team"

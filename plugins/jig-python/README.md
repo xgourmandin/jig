@@ -6,7 +6,7 @@ Enable in repos that contain Python.
 |---|---|---|
 | LSP | dependency `pyright-lsp@claude-plugins-official` | Official plugin, installed automatically: pyright definitions, references, diagnostics after each edit |
 | Edit checks (PostToolUse) | `hooks/scripts/py-post-edit.sh` | `ruff format` + `ruff check --fix` on every edited `.py`/`.pyi` (repo config and excludes apply); remaining issues fed back to Claude; records the file for Stop |
-| Checks (Stop) | `hooks/scripts/py-stop-check.sh` | For each project edited this session: `pyright` on the edited files, then the project's `pytest` suite; blocks once on failures |
+| Checks (Stop) | `hooks/scripts/py-stop-check.sh` | For each project edited this session: `pyright` on the edited files, then the project's `pytest` suite; blocks once on failures (the re-check after Claude's fix only reports, never blocks twice) |
 | Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing |
 | Skill | `skills/python-conventions` | Jig conventions, loaded automatically for Python files |
 

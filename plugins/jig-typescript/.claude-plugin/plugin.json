@@ -1,6 +1,6 @@
 {
   "name": "jig-typescript",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Jig TypeScript stack: code intelligence (via typescript-lsp), biome or prettier + eslint on edit (detected per repo), tsc + tests on Stop, conventions skill.",
   "author": {
     "name": "Jig Platform Team"

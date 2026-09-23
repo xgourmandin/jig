@@ -3,7 +3,8 @@
 # ts-post-edit.sh), type check each TypeScript project (nearest tsconfig.json)
 # with `tsc --noEmit`, then run each package's tests (nearest package.json):
 # vitest, else the package manager's `test` script. Never installs packages.
-# Failures block the stop once; missing tools only warn.
+# Failures block the stop once; the re-check after Claude's fix only reports.
+# Missing tools only warn.
 set -uo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -13,9 +14,9 @@ command -v jq >/dev/null || exit 0
 sid="$(jq -r '.session_id // empty' <<<"$input")"
 state="$(jig_ts_session_file "$sid")"
 [[ -s "$state" ]] || exit 0
-# Loop protection: we already blocked in this stop cycle; keep the list so the
-# next stop re-checks the fix.
-[[ "$(jq -r '.stop_hook_active // false' <<<"$input")" == "true" ]] && exit 0
+# Loop protection: never block twice in a row. When a Stop hook already blocked
+# in this stop cycle, still re-check Claude's fix, but only report failures.
+recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
 
 errors="" warnings=""
 declare -A roots=() tsconfigs=()
@@ -63,6 +64,12 @@ for root in "${!roots[@]}"; do
 done
 
 if [[ -n "$errors" ]]; then
+  if [[ "$recheck" == true ]]; then
+    # Keep the list: the next stop checks again.
+    jq -n --arg m "Jig typescript: checks still fail after Claude's fix (not blocking twice):"$'\n\n'"$errors$warnings" \
+      '{systemMessage: $m}'
+    exit 0
+  fi
   jq -n --arg r "Checks failed for TypeScript/JavaScript code edited in this session. Fix them, then stop. Do not weaken or skip tests or add @ts-ignore/@ts-expect-error or eslint-disable unless the user agrees:"$'\n\n'"$errors$warnings" \
     '{decision: "block", reason: $r}'
   exit 0

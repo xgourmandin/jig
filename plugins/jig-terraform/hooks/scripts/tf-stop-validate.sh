@@ -4,7 +4,8 @@
 # credentials, no plan. Never leaves files in the repo: .terraform goes to the
 # plugin data dir and the lock file is restored afterwards.
 # Then scans them with trivy (offline, HIGH/CRITICAL) when installed.
-# Findings block the stop once; tool/init problems only warn the user.
+# Findings block the stop once; the re-check after Claude's fix only reports.
+# Tool/init problems only warn the user.
 set -uo pipefail
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -14,9 +15,9 @@ command -v jq >/dev/null || exit 0
 sid="$(jq -r '.session_id // empty' <<<"$input")"
 state="$(jig_tf_session_file "$sid")"
 [[ -s "$state" ]] || exit 0
-# Loop protection: we already blocked in this stop cycle; keep the list so the
-# next stop re-checks the fix.
-[[ "$(jq -r '.stop_hook_active // false' <<<"$input")" == "true" ]] && exit 0
+# Loop protection: never block twice in a row. When a Stop hook already blocked
+# in this stop cycle, still re-check Claude's fix, but only report failures.
+recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
 
 warn() { jq -n --arg m "Jig terraform: $1" '{systemMessage: $m}'; exit 0; }
 
@@ -55,6 +56,12 @@ while IFS= read -r dir; do
 done < <(sort -u "$state")
 
 if [[ -n "$errors" ]]; then
+  if [[ "$recheck" == true ]]; then
+    # Keep the list: the next stop checks again.
+    jq -n --arg m "Jig terraform: checks still fail after Claude's fix (not blocking twice):"$'\n\n'"$errors$warnings" \
+      '{systemMessage: $m}'
+    exit 0
+  fi
   jq -n --arg r "Checks failed for Terraform modules edited in this session. Fix them, then stop. For a trivy finding that is intended, add \`#trivy:ignore:<ID>\` with a reason, but only if the user agrees:"$'\n\n'"$errors$warnings" \
     '{decision: "block", reason: $r}'
   exit 0

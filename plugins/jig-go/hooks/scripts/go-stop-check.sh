@@ -2,7 +2,8 @@
 # Stop: for every Go module Claude edited in this session (files recorded by
 # go-post-edit.sh), lint the edited packages with golangci-lint (the repo's
 # .golangci.yml applies; `go vet` when golangci-lint is missing) and run their
-# tests. Failures block the stop once; missing tools only warn.
+# tests. Failures block the stop once; the re-check after Claude's fix only
+# reports. Missing tools only warn.
 # Never changes go.mod/go.sum (-mod=readonly) and writes no files in the repo:
 # build, test and lint caches live outside it.
 set -uo pipefail
@@ -14,9 +15,9 @@ command -v jq >/dev/null || exit 0
 sid="$(jq -r '.session_id // empty' <<<"$input")"
 state="$(jig_go_session_file "$sid")"
 [[ -s "$state" ]] || exit 0
-# Loop protection: we already blocked in this stop cycle; keep the list so the
-# next stop re-checks the fix.
-[[ "$(jq -r '.stop_hook_active // false' <<<"$input")" == "true" ]] && exit 0
+# Loop protection: never block twice in a row. When a Stop hook already blocked
+# in this stop cycle, still re-check Claude's fix, but only report failures.
+recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
 
 errors="" warnings=""
 declare -A pkgs_by_root=()
@@ -64,6 +65,12 @@ for root in "${!pkgs_by_root[@]}"; do
 done
 
 if [[ -n "$errors" ]]; then
+  if [[ "$recheck" == true ]]; then
+    # Keep the list: the next stop checks again.
+    jq -n --arg m "Jig go: checks still fail after Claude's fix (not blocking twice):"$'\n\n'"$errors$warnings" \
+      '{systemMessage: $m}'
+    exit 0
+  fi
   jq -n --arg r "Checks failed for Go code edited in this session. Fix them, then stop. Do not weaken or skip tests or add //nolint unless the user agrees:"$'\n\n'"$errors$warnings" \
     '{decision: "block", reason: $r}'
   exit 0

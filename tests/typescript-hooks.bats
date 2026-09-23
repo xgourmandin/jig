@@ -225,7 +225,16 @@ stub_bin() {
   [[ "$(jq -r .reason <<<"$output")" == *"(tsc)"*"src/calc.ts("*"error TS2322"* ]]
   [ -s "$STATE" ]
   run stop true
+  [ "$(jq -r '.decision // empty' <<<"$output")" = "" ]
+  [[ "$(jq -r .systemMessage <<<"$output")" == *"checks still fail after Claude's fix"*"error TS2322"* ]]
+  [ -s "$STATE" ]
+}
+@test "stop: re-check after a block passes silently and clears the list" {
+  edit "$REPO/$CALC"
+  run stop true
+  [ "$status" -eq 0 ]
   [ -z "$output" ]
+  [ ! -e "$STATE" ]
 }
 @test "stop: failing test blocks with vitest output" {
   sed -i 's/return a + b/return a - b/' "$CALC"

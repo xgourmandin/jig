@@ -6,7 +6,7 @@ Enable in repos that contain Terraform or OpenTofu.
 |---|---|---|
 | LSP | `.lsp.json` | Wires `terraform-ls` into Claude Code's LSP tool (definitions, references, diagnostics) |
 | Edit checks (PostToolUse) | `hooks/scripts/tf-post-edit.sh` | `fmt` + `tflint` on every edited `.tf`, problems fed back to Claude; records the module for Stop |
-| Validate (Stop) | `hooks/scripts/tf-stop-validate.sh` | Offline `init -backend=false` + `validate` on modules edited this session; blocks once on errors. `.terraform/` goes to the plugin data dir and the lock file is restored, so the repo is untouched |
+| Validate (Stop) | `hooks/scripts/tf-stop-validate.sh` | Offline `init -backend=false` + `validate` on modules edited this session; blocks once on errors (the re-check after Claude's fix only reports, never blocks twice). `.terraform/` goes to the plugin data dir and the lock file is restored, so the repo is untouched |
 | Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing |
 | Skill | `skills/terraform-conventions` | Jig conventions, loaded automatically for `.tf`/`.tfvars` files |
 | Skill | `skills/tf-plan-review` | Plan-only risk review (prefers the CI plan) |

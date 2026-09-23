@@ -133,3 +133,11 @@ Findings:
 - vitest writes `node_modules/.vite/vitest/.../results.json` unless run with `--no-cache` (not controllable when the repo's `npm test` calls vitest).
 Next: task-runner fallback (last Phase 2 item); decide on re-checking fixes when `stop_hook_active` (see jig-go findings).
 Blockers: none (marketplace URL still undecided).
+
+## 2026-09-23 — claude (Claude Code, Stop re-check)
+Decision (human): the stack Stop hooks re-check Claude's fix instead of skipping the stop that follows a block.
+Done:
+- jig-terraform, jig-python, jig-typescript and jig-go Stop hooks: when `stop_hook_active` is true they still run the checks for the files edited in the session. If the fix is clean, they clear the list silently. If checks still fail, they show a `systemMessage` ("checks still fail after Claude's fix (not blocking twice)") with the failures, don't block, and keep the list so the next stop checks again. So a Stop hook never blocks twice in a row, and a bad fix no longer ends a `-p` run unchecked.
+- Tests: in each suite, the `stop true` case now expects the report (no `decision`), and a new case expects a clean re-check to be silent and clear the list. Rule added to CLAUDE.md, READMEs updated. The four plugins are bumped to 0.1.1 (plugin.json + marketplace.json).
+Note: jig-core's require-progress keeps its plain skip on `stop_hook_active` (it only asks for a progress note; nothing to re-check).
+Next: task-runner fallback (last Phase 2 item).

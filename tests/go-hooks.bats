@@ -123,8 +123,16 @@ stub_bin() {
   [[ "$(jq -r .reason <<<"$output")" == *"(golangci-lint, exit 1)"*"calc/rm.go:6:"*"(errcheck)"* ]]
   [ -s "$STATE" ]
   run stop true
-  [ -z "$output" ]
+  [ "$(jq -r '.decision // empty' <<<"$output")" = "" ]
+  [[ "$(jq -r .systemMessage <<<"$output")" == *"checks still fail after Claude's fix"*"(errcheck)"* ]]
   [ -s "$STATE" ]
+}
+@test "stop: re-check after a block passes silently and clears the list" {
+  edit "$REPO/calc/calc.go"
+  run stop true
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$STATE" ]
 }
 @test "stop: failing test blocks with go test output" {
   sed -i 's/return a + b/return a - b/' "$CALC"

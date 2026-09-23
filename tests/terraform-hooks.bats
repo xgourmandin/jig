@@ -117,13 +117,21 @@ stub_bin() {
   [[ "$(jq -r .reason <<<"$output")" == *"var.nope"* ]]
   [ -s "$STATE" ]
 }
-@test "stop: stop_hook_active lets Claude stop" {
+@test "stop: re-check after a block reports but never blocks twice" {
   edit "$REPO/main.tf"
   break_module
   run stop true
   [ "$status" -eq 0 ]
-  [ -z "$output" ]
+  [ "$(jq -r '.decision // empty' <<<"$output")" = "" ]
+  [[ "$(jq -r .systemMessage <<<"$output")" == *"checks still fail after Claude's fix"*"var.nope"* ]]
   [ -s "$STATE" ]
+}
+@test "stop: re-check after a block passes silently and clears the list" {
+  edit "$REPO/main.tf"
+  run stop true
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$STATE" ]
 }
 @test "stop: existing lock file is restored byte for byte" {
   printf '# lock placeholder\n' >.terraform.lock.hcl

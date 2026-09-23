@@ -1,0 +1,6 @@
+{
+  "name": "acme-core",
+  "version": "0.1.0",
+  "description": "ACME harness core: guardrails, per-branch work state, workflow skills.",
+  "author": { "name": "ACME Platform Team" }
+}

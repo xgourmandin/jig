@@ -1,0 +1,6 @@
+{
+  "name": "acme-terraform",
+  "version": "0.1.0",
+  "description": "ACME Terraform stack: terraform-ls code intelligence, fmt/tflint feedback on every edit, plan review skill.",
+  "author": { "name": "ACME Platform Team" }
+}

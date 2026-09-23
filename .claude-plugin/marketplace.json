@@ -8,7 +8,7 @@
     {
       "name": "jig-core",
       "source": "./plugins/jig-core",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "Always-on core: guardrails, per-branch work state, repo map, ADR and navigation skills."
     },
     {

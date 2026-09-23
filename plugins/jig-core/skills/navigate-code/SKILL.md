@@ -8,7 +8,7 @@ user-invocable: false
 
 Use the cheapest tool that answers the question, in this order. Move down only when the one above cannot answer.
 
-1. **Repo map** (MCP server `repo-map`, codebase-memory-mcp): structure and relationships across the whole repo, including Terraform.
+1. **Repo map** (MCP server `repo-map`, codebase-memory-mcp): structure and relationships across the whole repo, including infrastructure code (HCL).
    - Where is X / what is there: `search_graph` (name or label pattern), `get_architecture` (aspects `overview`) for a first look at an unfamiliar repo.
    - Who calls X / what X depends on: `trace_path`.
    - Read one symbol: `get_code_snippet` instead of reading the whole file.

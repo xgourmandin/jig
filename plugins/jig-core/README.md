@@ -4,7 +4,7 @@ Always enabled in every Jig repo.
 
 | Component | File | What it does |
 |---|---|---|
-| Guardrails (PreToolUse) | `hooks/scripts/guard.sh` | Blocks terraform apply/destroy/import, state mutation, force-push, `rm -rf /`, and access to `.env`, `*.tfstate`, key material |
+| Guardrails (PreToolUse) | `hooks/scripts/guard.sh` | Blocks terraform/tofu apply/destroy/import, state mutation, force-push, `rm -rf /`, and access to `.env`, `*.tfstate`, key material. The IaC checks live here, not in jig-terraform, so they apply whichever stack plugins a repo enables |
 | Session context (SessionStart) | `hooks/scripts/session-start.sh` | Injects branch, plan status and last progress entry from `.ai/work/<branch>/`. After compaction (source `compact`) it also re-injects the current plan phase |
 | Progress enforcement (Stop) | `hooks/scripts/require-progress.sh` | Asks Claude once to update plan/progress when code changed but work state did not |
 | Repo map (MCP) | `.mcp.json`, `scripts/repo-map-mcp.sh` | codebase-memory-mcp as MCP server `repo-map` (stdio, reads limited to the project). Pilot: security review pending |

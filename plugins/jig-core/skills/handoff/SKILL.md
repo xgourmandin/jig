@@ -6,6 +6,6 @@ description: Bring the branch work state up to date so another person or session
 # Handoff
 
 1. Tick completed tasks in `.ai/work/<branch>/plan.md`; add newly discovered tasks.
-2. Append a dated entry to `progress.md`: Done, Decisions (with the why), Next (the exact next action), Blockers, and commands needed to reproduce state (e.g. `terraform init -backend=false`).
+2. Append a dated entry to `progress.md`: Done, Decisions (with the why), Next (the exact next action), Blockers, and commands needed to reproduce state (e.g. `mise install`, `mise run test`, or a stack setup step such as `terraform init -backend=false`).
 3. Run the project's lint/test task and report the real result; do not guess.
 4. List uncommitted changes. Do not commit or push unless the user asks.

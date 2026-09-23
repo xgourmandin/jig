@@ -74,3 +74,24 @@ Findings:
 - Claude Code truncates the server's MCP instructions (2378 → 2048 chars), so the full skill is needed.
 - The first 3 smoke runs reported the server `failed` (the first because PATH lacked mise tools; the next two unexplained, no MCP lines in the log). Every later run connected. Watch for this in the pilot.
 Next: one full `init` on a pilot repo to judge page quality, time and plan quota used.
+
+## 2026-09-23 — claude (Claude Code, Phase 2 start: jig-python)
+Decisions (open question 5, from the human): Python uses **pyright** and **uv**. TypeScript **detects per repo** (biome.json → biome, else eslint + prettier). Tests on Stop: **pytest / vitest (fallback `npm test`) / go test**, only when the session changed code in that language. Recorded in spec.md.
+Done:
+- Checked current docs: plugin `dependencies` in plugin.json support `{name, marketplace}`. The root marketplace must list `allowCrossMarketplaceDependenciesOn: ["claude-plugins-official"]` (added). The official LSP plugins are `pyright-lsp` (`pyright-langserver`), `typescript-lsp` (`typescript-language-server`) and `gopls-lsp` (`gopls`). `MultiEdit` is gone, so the new hooks match `Edit|Write`.
+- New plugin `jig-python` 0.1.0:
+  - PostToolUse `py-post-edit.sh`: `ruff format` + `ruff check --fix`, with repo config and `--force-exclude`. Remaining issues → exit 2. The file is recorded for Stop.
+  - Stop `py-stop-check.sh`: per project (nearest pyproject.toml/setup.cfg/setup.py), runs `pyright --outputjson` on the edited files (errors only, with the project `.venv` python), then pytest (`uv run --frozen pytest` with uv.lock, else `.venv/bin/pytest`, else PATH). Blocks once. Missing tools only warn.
+  - SessionStart `check-tools.sh`.
+  - Path-scoped `python-conventions` skill.
+- Repo stays clean: `RUFF_CACHE_DIR` in the plugin data dir, `pytest -p no:cacheprovider`, `PYTHONDONTWRITEBYTECODE=1`.
+- Fixture `tests/fixtures/py-sample` (src layout, no third-party deps: pyright can't see a pipx pytest).
+- jig-init: a Python stack enables jig-python and pins uv, ruff, npm:pyright and node, and adds `ruff format --check .`, `ruff check .` and `pyright` to lint.
+- Harness mise.toml pins uv 0.12.17, ruff 0.16.8, npm:pyright 1.1.414 and pipx:pytest 9.1.1.
+- Tests 106/106, lint green.
+- Smoke (`claude -p --plugin-dir plugins/jig-python`, `pyright-lsp` installed at project scope in a throwaway copy of the fixture): LSP goToDefinition on `mean` → `calc.py:8:5`; the badly formatted `twice` was reformatted by ruff; LSP diagnostics flagged the return type right after the edit; the Stop hook blocked once with the pyright error; Claude fixed the body; the next stop passed. Uninstalled afterwards.
+Findings:
+- **A plugin with a missing dependency is disabled entirely** (`plugin_errors: dependency-unsatisfied`), hooks included. The first smoke run silently had no jig-python. Marketplace installs auto-install dependencies (per docs, untested until the marketplace URL exists). With `--plugin-dir`, install `pyright-lsp` first (noted in CLAUDE.md).
+- ruff creates `.ruff_cache/` even with `--no-cache`, so we redirect `RUFF_CACHE_DIR` instead.
+Next: jig-typescript (typescript-lsp; biome or eslint+prettier detected per repo; tsc + vitest/npm test on Stop), then jig-go, then the task-runner fallback.
+Blockers: none (marketplace URL still undecided).

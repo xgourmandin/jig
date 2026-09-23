@@ -23,5 +23,5 @@
 2. ~~Terraform or OpenTofu? Credentials?~~ → **both** Terraform and OpenTofu (detect per repo; guard both binaries). **Offline checks only**: hooks use `init -backend=false` + `validate` + static scanners; `plan` stays in CI (answered 2026-09-23). Cloud providers: not asked, not needed for offline checks.  *(Phase 1)*
 3. ~~Pre-commit tooling~~ → **none yet**; CI runs `mise run lint`. Pick lefthook as the default when we add git hooks (answered 2026-09-23).  *(Phase 1)*
 4. ~~Ticket system~~ → **skip for now**; no ticket linking in Phase 1 (answered 2026-09-23).  *(Phase 1)*
-5. Python: pyright or mypy? uv or poetry? TypeScript: biome or eslint+prettier? Test runners?  *(Phase 2)*
+5. ~~Python/TypeScript toolchain~~ → Python: **pyright** (same engine as the LSP) and **uv**. TypeScript: **detect per repo** (`biome.json` → biome, eslint config → eslint + prettier). Tests on Stop: **pytest / vitest (fallback `npm test`) / go test**, only when the session changed code in that language (answered 2026-09-23).  *(Phase 2)*
 6. Claude plan (Team/Enterprise) and whether admins will push managed settings.  *(Phase 3)*

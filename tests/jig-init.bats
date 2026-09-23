@@ -31,23 +31,37 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   grep -qxF '.archgate/rules.d.ts' .gitignore
 }
 
-@test "py-only repo: core only (jig-python not built yet), no terraform bits" {
+@test "py-only repo: core + python, python tooling, no terraform bits" {
   add app/main.py
   run init
   [ "$status" -eq 0 ]
-  [[ "$output" == *"jig-python does not exist yet"* ]]
-  [ "$(enabled)" = "jig-core@jig" ]
+  [ "$(enabled)" = "jig-core@jig,jig-python@jig" ]
+  grep -q '^ruff = "' mise.toml
+  grep -q '^uv = "' mise.toml
+  grep -q '^"npm:pyright" = "' mise.toml
+  grep -q '^node = "' mise.toml
+  grep -q '"ruff check ."' mise.toml
+  grep -q '"pyright"' mise.toml
   ! grep -q terraform mise.toml
+  ! grep -q openwiki mise.toml
   [ ! -e .claude/rules/terraform.md ]
   [ ! -e .archgate/adrs/TF-001-pin-module-sources.md ]
   [ -f .archgate/adrs/GEN-001-record-decisions-as-adrs.md ]
+}
+
+@test "stack without a plugin yet: noted, core only" {
+  add go.mod
+  run init
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"jig-go does not exist yet"* ]]
+  [ "$(enabled)" = "jig-core@jig" ]
 }
 
 @test "mixed repo: terraform plugin enabled alongside core" {
   add infra/main.tf
   add app/pyproject.toml
   run init
-  [ "$(enabled)" = "jig-core@jig,jig-terraform@jig" ]
+  [ "$(enabled)" = "jig-core@jig,jig-python@jig,jig-terraform@jig" ]
 }
 
 @test "pins versions from the harness mise.toml" {

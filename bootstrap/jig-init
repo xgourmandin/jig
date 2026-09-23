@@ -56,6 +56,7 @@ for s in "${stacks[@]}"; do
   fi
 done
 has_tf=0; [[ " ${plugins[*]} " == *" jig-terraform "* ]] && has_tf=1
+has_py=0; [[ " ${plugins[*]} " == *" jig-python "* ]] && has_py=1
 (( openwiki )) && plugins+=(jig-openwiki)
 say "plugins  ${plugins[*]}"
 
@@ -95,9 +96,15 @@ else
       echo "go = $(ver go)"
       echo "\"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server\" = $(ver '"go:github.com/hashicorp/terraform-mcp-server/cmd/terraform-mcp-server"')"
     fi
+    if (( has_py )); then
+      echo "uv = $(ver uv)"
+      echo "ruff = $(ver ruff)"
+      echo "# pyright ships pyright-langserver, used by the pyright-lsp plugin."
+      echo "\"npm:pyright\" = $(ver '"npm:pyright"')"
+    fi
+    (( has_py || openwiki )) && echo "node = $(ver node)"
     if (( openwiki )); then
       echo "# Generated wiki (jig-openwiki), driven locally by Claude Code."
-      echo "node = $(ver node)"
       echo "\"npm:openwiki\" = $(ver '"npm:openwiki"')"
     fi
     echo
@@ -113,6 +120,11 @@ else
       echo "  \"$tf fmt -check -recursive\","
       echo "  \"tflint --recursive\","
       echo "  \"trivy config --quiet --skip-check-update --severity HIGH,CRITICAL --exit-code 1 .\","
+    fi
+    if (( has_py )); then
+      echo "  \"ruff format --check .\","
+      echo "  \"ruff check .\","
+      echo "  \"pyright\","
     fi
     echo "]"
   } >mise.toml

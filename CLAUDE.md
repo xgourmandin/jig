@@ -7,7 +7,8 @@ This repo is Jig's **Claude Code plugin marketplace**: the shared "company harne
 - `plugins/jig-core/`: always-on core (guardrails, per-branch work state, repo map MCP, workflow skills)
 - `plugins/jig-terraform/`: Terraform/OpenTofu stack (terraform-ls LSP, fmt/tflint/validate/trivy hooks, registry MCP, skills)
 - `plugins/jig-openwiki/`: opt-in generated wiki (OpenWiki MCP driven by Claude Code, run locally)
-- `plugins/jig-{python,typescript,go}/`: to be created (see plan)
+- `plugins/jig-python/`: Python stack (depends on official `pyright-lsp`; ruff on edit, pyright + pytest on Stop, skill)
+- `plugins/jig-{typescript,go}/`: to be created (see plan)
 - `bootstrap/`: `jig-init` sets up a consuming repo (uses `detect-stack.sh` and `templates/`)
 - `tests/`: bats tests for every hook script
 - `.ai/work/<branch>/`: work state (spec, plan, progress) — we dogfood the harness here
@@ -16,7 +17,7 @@ This repo is Jig's **Claude Code plugin marketplace**: the shared "company harne
 - `mise install`: install pinned tools (jq, bats, shellcheck, terraform, opentofu, terraform-ls, tflint, trivy, archgate, codebase-memory-mcp, terraform-mcp-server, node, openwiki)
 - `mise run test`: bats tests
 - `mise run lint`: shellcheck + `claude plugin validate`
-- Try a plugin locally without installing: `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform`
+- Try a plugin locally without installing: `claude --plugin-dir ./plugins/jig-core --plugin-dir ./plugins/jig-terraform`. A plugin whose `dependencies` are not installed is disabled (`dependency-unsatisfied`), so for jig-python first run `claude plugin install pyright-lsp@claude-plugins-official --scope project` in the sample repo
 - Set up a sample repo: `bootstrap/jig-init --marketplace-url . --no-install <repo>`
 - The rtk hook breaks `mise run …` output; use `rtk proxy mise run test`
 

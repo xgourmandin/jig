@@ -8,14 +8,14 @@
 5. The harness must: remember where development stands, share repo-structure knowledge, and navigate code without grepping the whole repo.
 
 ## Architecture
-**Distribution.** This repo is a private Claude Code plugin marketplace. Each consuming repo commits `.claude/settings.json` with `extraKnownMarketplaces` (pointing here) and `enabledPlugins` (core + its stacks). Project type = which plugins are enabled. New language = new plugin folder. Note: plugins from an external marketplace enabled only in project settings still need `claude plugin install --scope project` per developer, so `jig-init` must run it. Admins can restrict marketplaces via managed settings (`strictKnownMarketplaces`) and enable auto-update per marketplace.
+**Distribution.** This repo is a private Claude Code plugin marketplace. Each consuming repo commits `.claude/settings.json` with `extraKnownMarketplaces` (pointing here) and `enabledPlugins` (core + its stacks). Project type = which plugins are enabled. New language = new plugin folder. Note: plugins from an external marketplace enabled only in project settings still need `claude plugin install --scope project` per developer, so `jig-init` must run it. Admins can restrict marketplaces via managed settings (`strictKnownMarketplaces`) and enable auto-update per marketplace. Language plugins depend on the official LSP plugins (`claude-plugins-official`, allowed by `allowCrossMarketplaceDependenciesOn` in our marketplace.json), so we don't ship our own LSP configs for them.
 
 **Plugins.**
 | Plugin | Contents |
 |---|---|
 | jig-core | Guardrails (PreToolUse), session context (SessionStart), progress enforcement (Stop), plan re-injection after compaction (SessionStart `compact`), repo map (codebase-memory-mcp MCP server + SessionStart status), skills: start-work, handoff, navigate-code, adrs (later: spec, implement, review) |
 | jig-terraform | Terraform or OpenTofu (picked per repo). terraform-ls via `.lsp.json`, fmt+tflint on edit, offline validate + trivy on Stop for modules edited in the session, skills: terraform-conventions (path-scoped), tf-plan-review; HashiCorp terraform-mcp-server (registry toolset only) for provider/module docs |
-| jig-python | depends on official `pyright-lsp`; ruff format/check on edit; type check + tests on Stop |
+| jig-python | depends on official `pyright-lsp` (auto-installed; the plugin is disabled if the dependency is missing); ruff format + safe fixes on edit; pyright on edited files + pytest on Stop for projects edited in the session; tools from the project `.venv` first, pytest via `uv run` when `uv.lock` exists; skill: python-conventions (path-scoped) |
 | jig-typescript | depends on official `typescript-lsp`; biome or eslint/prettier on edit; tsc + tests on Stop |
 | jig-go | depends on official `gopls-lsp`; gofmt/goimports on edit; golangci-lint + go test on Stop |
 | jig-openwiki | Opt-in generated wiki: OpenWiki MCP server (host-driven, no API key) + skill; run locally, reviewed in a PR |

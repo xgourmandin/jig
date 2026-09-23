@@ -1,0 +1,11 @@
+{
+  "name": "jig-python",
+  "version": "0.1.0",
+  "description": "Jig Python stack: pyright code intelligence (via pyright-lsp), ruff format + lint on edit, pyright + pytest on Stop, conventions skill.",
+  "author": {
+    "name": "Jig Platform Team"
+  },
+  "dependencies": [
+    { "name": "pyright-lsp", "marketplace": "claude-plugins-official" }
+  ]
+}

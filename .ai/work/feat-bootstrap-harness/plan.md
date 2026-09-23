@@ -21,7 +21,7 @@
 - [x] bats tests for require-progress, tf-post-edit, detect-stack — verified by: `mise run test` (80 tests)
 
 ## Phase 2: language plugins
-- [ ] jig-python (depends on pyright-lsp; ruff on edit; type check + pytest on Stop) — verified by: fixture + bats
+- [x] jig-python (depends on pyright-lsp; ruff on edit; pyright + pytest on Stop; python-conventions skill; jig-init pins uv/ruff/pyright) — verified by: `tests/fixtures/py-sample`, `tests/python-hooks.bats` (22), `tests/jig-init.bats`, smoke (`claude -p`: LSP definition, ruff reformat on edit, Stop blocked on pyright error, fixed)
 - [ ] jig-typescript (depends on typescript-lsp; linter/formatter on edit; tsc + tests on Stop) — verified by: fixture + bats
 - [ ] jig-go (depends on gopls-lsp; gofmt/goimports on edit; golangci-lint + go test on Stop) — verified by: fixture + bats
 - [ ] Hooks call the consuming repo's task runner when present (`mise run lint`), falling back to direct tool calls — verified by: bats

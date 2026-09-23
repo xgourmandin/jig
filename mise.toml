@@ -17,6 +17,11 @@ go = "1.27.1"
 # Generated wiki (jig-openwiki): OpenWiki needs Node >= 22.22.
 node = "24.21.0"
 "npm:openwiki" = "0.5.2"
+# Python stack (jig-python): pyright via npm (ships pyright-langserver for the LSP).
+uv = "0.12.17"
+ruff = "0.16.8"
+"npm:pyright" = "1.1.414"
+"pipx:pytest" = "9.1.1"
 
 [env]
 # Archgate enables anonymous telemetry by default.
@@ -33,5 +38,6 @@ run = [
   "claude plugin validate plugins/jig-core",
   "claude plugin validate plugins/jig-terraform",
   "claude plugin validate plugins/jig-openwiki",
+  "claude plugin validate plugins/jig-python",
   "claude plugin validate .",
 ]

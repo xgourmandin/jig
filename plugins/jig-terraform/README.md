@@ -17,3 +17,5 @@ Enable in repos that contain Terraform or OpenTofu.
 **Repo-specific conventions** go in the consuming repo's `.claude/rules/terraform.md` (with `paths: ["**/*.tf"]` frontmatter), written by `jig-init`. Plugins cannot ship rules, so shared conventions live in the skill.
 
 Requires `terraform` or `tofu`, `terraform-ls`, `tflint`, `jq` on PATH; optional `trivy`, `terraform-mcp-server` (all via the repo's `mise.toml`, written by `jig-init`).
+
+**Repo lint task.** When the repo defines a mise `lint` task (and mise is installed), jig-core runs `mise run lint` on Stop, the same check as CI, and this plugin skips `trivy` on Stop. Without one, it calls the tool directly.

@@ -15,3 +15,5 @@ Enable in repos that contain Go.
 **Modules and side effects.** The module is the nearest directory with `go.mod` (not above the git root), so monorepos and nested modules work; files outside any module are not checked. Stop runs with `-mod=readonly` (`-mod=vendor` when `vendor/modules.txt` exists), so it never changes `go.mod`/`go.sum`. Go's build and test caches live in `GOCACHE`, golangci-lint's in the plugin data dir; nothing is written to the repo. A golangci-lint config it cannot load (for example a v1 config: run `golangci-lint migrate`) only warns.
 
 Requires `go`, `gopls`, `goimports`, `golangci-lint` (v2) and `jq` on PATH (via the repo's `mise.toml`, written by `jig-init`).
+
+**Repo lint task.** When the repo defines a mise `lint` task (and mise is installed), jig-core runs `mise run lint` on Stop, the same check as CI, and this plugin skips `golangci-lint` on Stop. Without one, it calls the tool directly.

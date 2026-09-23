@@ -11,13 +11,13 @@
     {
       "name": "jig-core",
       "source": "./plugins/jig-core",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "Always-on core: guardrails, per-branch work state, repo map, ADR and navigation skills."
     },
     {
       "name": "jig-terraform",
       "source": "./plugins/jig-terraform",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions and plan review skills, registry docs MCP."
     },
     {
@@ -29,19 +29,19 @@
     {
       "name": "jig-python",
       "source": "./plugins/jig-python",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "Python stack: pyright code intelligence (pyright-lsp), ruff format + lint on edit, pyright + pytest on Stop, conventions skill."
     },
     {
       "name": "jig-go",
       "source": "./plugins/jig-go",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "Go stack: gopls code intelligence (gopls-lsp), goimports on edit, golangci-lint + go test on Stop, conventions skill."
     },
     {
       "name": "jig-typescript",
       "source": "./plugins/jig-typescript",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "TypeScript stack: code intelligence (typescript-lsp), biome or prettier + eslint on edit (detected per repo), tsc + vitest/npm test on Stop, conventions skill."
     }
   ]

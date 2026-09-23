@@ -23,6 +23,14 @@ setup() {
 edit()  { jq -nc --arg f "$1" '{session_id:"s1",tool_name:"Edit",tool_input:{file_path:$f}}' | bash "$SCRIPTS/ts-post-edit.sh"; }
 stop()  { jq -nc --argjson a "${1:-false}" '{session_id:"s1",hook_event_name:"Stop",stop_hook_active:$a}' | bash "$SCRIPTS/ts-stop-check.sh"; }
 CALC="src/calc.ts"
+
+# The repo defines a mise lint task (jig-core runs it); a fake mise is enough here.
+with_lint_task() {
+  printf '\n[tasks.lint]\nrun = "true"\n' >>mise.toml
+  MISEBIN="$BATS_TEST_TMPDIR/misebin"; mkdir -p "$MISEBIN"
+  printf '#!/bin/sh\nexit 0\n' >"$MISEBIN/mise"; chmod +x "$MISEBIN/mise"
+  export PATH="$MISEBIN:$PATH"
+}
 lib()   { bash -c "source '$SCRIPTS/lib.sh'; $1"; }
 
 # Switch the fixture from biome to eslint (+ prettier with $1 = prettier).
@@ -235,6 +243,13 @@ stub_bin() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$STATE" ]
+}
+@test "stop: lint task present -> tsc skipped" {
+  with_lint_task
+  printf '\nexport function twice(x: number): string {\n  return x * 2;\n}\n' >>"$CALC"
+  edit "$REPO/$CALC"
+  run stop
+  [ -z "$output" ]
 }
 @test "stop: failing test blocks with vitest output" {
   sed -i 's/return a + b/return a - b/' "$CALC"

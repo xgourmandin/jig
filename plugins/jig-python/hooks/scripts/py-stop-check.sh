@@ -15,6 +15,9 @@ state="$(jig_py_session_file "$sid")"
 # Loop protection: never block twice in a row. When a Stop hook already blocked
 # in this stop cycle, still re-check Claude's fix, but only report failures.
 recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
+# The repo's lint task (run by jig-core on Stop, same as CI) replaces the
+# direct static checks; tests still run here.
+lint_task=0; jig_lint_task "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && lint_task=1
 
 errors="" warnings=""
 declare -A files_by_root=()
@@ -28,8 +31,11 @@ for root in "${!files_by_root[@]}"; do
   mapfile -t files <<<"${files_by_root[$root]%$'\n'}"
   cd "$root" || continue
 
-  # 1. pyright on the edited files, with the project's config and venv.
-  if pyright="$(jig_py_tool "$root" pyright)"; then
+  # 1. pyright on the edited files, with the project's config and venv (unless
+  # the repo's lint task covers static checks).
+  if (( lint_task )); then
+    :
+  elif pyright="$(jig_py_tool "$root" pyright)"; then
     args=(--outputjson)
     [[ -x "$root/.venv/bin/python" ]] && args+=(--pythonpath "$root/.venv/bin/python")
     out="$("$pyright" "${args[@]}" "${files[@]}" 2>/dev/null \

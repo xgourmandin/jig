@@ -141,3 +141,15 @@ Done:
 - Tests: in each suite, the `stop true` case now expects the report (no `decision`), and a new case expects a clean re-check to be silent and clear the list. Rule added to CLAUDE.md, READMEs updated. The four plugins are bumped to 0.1.1 (plugin.json + marketplace.json).
 Note: jig-core's require-progress keeps its plain skip on `stop_hook_active` (it only asks for a progress note; nothing to re-check).
 Next: task-runner fallback (last Phase 2 item).
+
+## 2026-09-23 — claude (Claude Code, task-runner fallback; Phase 2 complete)
+Done:
+- jig-core: PostToolUse `record-edit.sh` records the files Claude edits (not `.ai/`, only inside the repo). New Stop hook `lint-task.sh`: if the repo defines a mise `lint` task and mise is installed, it runs `mise run lint` once at the repo root with `MISE_TASK_RUN_AUTO_INSTALL=false`. It blocks once with the tail of the output and asks Claude to fix what it caused and to tell the user about pre-existing failures. The re-check after the fix only reports. An untrusted mise config warns.
+- Task detection `jig_lint_task`: `[tasks.lint]`, or `lint =` under `[tasks]`, in any mise config file, or a file task in `mise-tasks/` etc. It is copied into every plugin's lib.sh (plugins can't share files), and a bats test keeps the copies identical.
+- Stack Stop hooks skip their static checks when the task exists (pyright, tsc, golangci-lint/vet, trivy) and keep tests and terraform validate (validate isn't in the jig-init lint task). Per-edit formatting is unchanged.
+- Tests: `tests/lint-task.bats` (17) plus one skip test per stack suite. A manual run against real mise: a failing task blocked with its output, a passing one cleared the list.
+- Versions: jig-core, jig-terraform, jig-python, jig-typescript and jig-go bumped to 0.1.2.
+Decisions: lint only (no `mise run test`). Stack hooks already run targeted tests, and a full test task can be slow. The lint task is looked up at the git root only.
+Findings: mise didn't ask for trust for a tasks-only mise.toml in a scratch dir, so the untrusted branch is only a safety net.
+Next: Phase 3 (harness CI, tag v0.1.0, managed-settings snippet, pilot repos). Still open from Phase 1: security review of codebase-memory-mcp, human review of skills, OpenWiki run on a pilot repo.
+Blockers: marketplace URL still undecided.

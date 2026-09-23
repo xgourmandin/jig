@@ -22,3 +22,5 @@ Enable in repos that contain TypeScript or JavaScript.
 **LSP needs the project's TypeScript.** `typescript-language-server` uses the tsserver from the project's `node_modules/typescript` (it does not see a mise-installed TypeScript). TypeScript 7 (the native port) ships no tsserver, so the LSP needs TypeScript 6 or earlier in the project until the official plugin moves to TS 7's own language server. `tsc` on Stop works with either.
 
 Requires `typescript-language-server`, `jq` on PATH; `tsc`, the configured formatter/linter and the test runner in `node_modules` or on PATH (all via the repo's `mise.toml`, written by `jig-init`, and the repo's package install).
+
+**Repo lint task.** When the repo defines a mise `lint` task (and mise is installed), jig-core runs `mise run lint` on Stop, the same check as CI, and this plugin skips `tsc` on Stop. Without one, it calls the tool directly.

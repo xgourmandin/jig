@@ -18,6 +18,14 @@ edit()  { jq -nc --arg f "$1" '{session_id:"s1",tool_name:"Edit",tool_input:{fil
 stop()  { jq -nc --argjson a "${1:-false}" '{session_id:"s1",hook_event_name:"Stop",stop_hook_active:$a}' | bash "$SCRIPTS/py-stop-check.sh"; }
 CALC="src/pysample/calc.py"
 
+# The repo defines a mise lint task (jig-core runs it); a fake mise is enough here.
+with_lint_task() {
+  printf '\n[tasks.lint]\nrun = "true"\n' >>mise.toml
+  MISEBIN="$BATS_TEST_TMPDIR/misebin"; mkdir -p "$MISEBIN"
+  printf '#!/bin/sh\nexit 0\n' >"$MISEBIN/mise"; chmod +x "$MISEBIN/mise"
+  export PATH="$MISEBIN:$PATH"
+}
+
 # Directory of fake binaries, to control what is "installed".
 stub_bin() {
   STUBS="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$STUBS"
@@ -133,6 +141,18 @@ stub_bin() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$STATE" ]
+}
+@test "stop: lint task present -> pyright skipped, tests still run" {
+  with_lint_task
+  printf '\n\ndef twice(x: int) -> str:\n    return x * 2\n' >>"$CALC"
+  edit "$REPO/$CALC"
+  run stop
+  [ -z "$output" ]
+  sed -i 's/return a + b/return a - b/' "$CALC"
+  edit "$REPO/$CALC"
+  run stop
+  [[ "$(jq -r .reason <<<"$output")" == *"(pytest, exit 1)"* ]]
+  [[ "$(jq -r .reason <<<"$output")" != *"(pyright)"* ]]
 }
 @test "stop: failing test blocks with pytest output" {
   sed -i 's/return a + b/return a - b/' "$CALC"

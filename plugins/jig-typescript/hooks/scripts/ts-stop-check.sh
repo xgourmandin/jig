@@ -17,6 +17,9 @@ state="$(jig_ts_session_file "$sid")"
 # Loop protection: never block twice in a row. When a Stop hook already blocked
 # in this stop cycle, still re-check Claude's fix, but only report failures.
 recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
+# The repo's lint task (run by jig-core on Stop, same as CI) replaces the
+# direct static checks; tests still run here.
+lint_task=0; jig_lint_task "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && lint_task=1
 
 errors="" warnings=""
 declare -A roots=() tsconfigs=()
@@ -29,9 +32,11 @@ while IFS= read -r f; do
   fi
 done < <(sort -u "$state")
 
-# 1. tsc on each edited TypeScript project: whole project, errors only. The
+# 1. tsc on each edited TypeScript project (unless the repo's lint task covers
+# static checks): whole project, errors only. The
 # build info file (incremental/composite projects) goes to the plugin data dir.
 for tsconfig in "${!tsconfigs[@]}"; do
+  (( lint_task )) && break
   dir="$(dirname -- "$tsconfig")"
   if tsc="$(jig_ts_tool "${tsconfigs[$tsconfig]}" tsc)"; then
     key="$(printf '%s' "$tsconfig" | cksum | cut -d' ' -f1)"

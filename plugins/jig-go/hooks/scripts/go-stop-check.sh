@@ -18,6 +18,9 @@ state="$(jig_go_session_file "$sid")"
 # Loop protection: never block twice in a row. When a Stop hook already blocked
 # in this stop cycle, still re-check Claude's fix, but only report failures.
 recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
+# The repo's lint task (run by jig-core on Stop, same as CI) replaces the
+# direct static checks; tests still run here.
+lint_task=0; jig_lint_task "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && lint_task=1
 
 errors="" warnings=""
 declare -A pkgs_by_root=()
@@ -41,8 +44,11 @@ for root in "${!pkgs_by_root[@]}"; do
 
   # 1. golangci-lint on the edited packages (exit 1 = issues, incl. compile
   # errors as "typecheck"). A config it cannot load is the repo's problem, not
-  # this session's: warn. Without golangci-lint, fall back to go vet.
-  if command -v golangci-lint >/dev/null; then
+  # this session's: warn. Without golangci-lint, fall back to go vet. Skipped
+  # when the repo's lint task covers static checks.
+  if (( lint_task )); then
+    :
+  elif command -v golangci-lint >/dev/null; then
     out="$(golangci-lint run --modules-download-mode="$mod" --allow-serial-runners --timeout=5m --show-stats=false \
       --output.text.path=stdout --output.text.colors=false --output.text.print-issued-lines=false \
       "${pkgs[@]}" 2>&1)"; rc=$?

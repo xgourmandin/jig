@@ -3,7 +3,8 @@
 # (dirs recorded by tf-post-edit.sh). Offline: `init -backend=false`, no
 # credentials, no plan. Never leaves files in the repo: .terraform goes to the
 # plugin data dir and the lock file is restored afterwards.
-# Then scans them with trivy (offline, HIGH/CRITICAL) when installed.
+# Then scans them with trivy (offline, HIGH/CRITICAL) when installed, unless
+# the repo's lint task covers static checks.
 # Findings block the stop once; the re-check after Claude's fix only reports.
 # Tool/init problems only warn the user.
 set -uo pipefail
@@ -18,6 +19,9 @@ state="$(jig_tf_session_file "$sid")"
 # Loop protection: never block twice in a row. When a Stop hook already blocked
 # in this stop cycle, still re-check Claude's fix, but only report failures.
 recheck="$(jq -r '.stop_hook_active // false' <<<"$input")"
+# The repo's lint task (run by jig-core on Stop, same as CI) replaces the
+# direct static checks; tests still run here.
+lint_task=0; jig_lint_task "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" && lint_task=1
 
 warn() { jq -n --arg m "Jig terraform: $1" '{systemMessage: $m}'; exit 0; }
 
@@ -41,7 +45,7 @@ while IFS= read -r dir; do
   if out="$("$tf" -chdir="$dir" init -backend=false -input=false -no-color 2>&1)"; then
     if ! out="$("$tf" -chdir="$dir" validate -no-color 2>&1)"; then
       errors+="## $dir ($tf validate)"$'\n'"$(head -60 <<<"$out")"$'\n\n'
-    elif command -v trivy >/dev/null; then
+    elif (( ! lint_task )) && command -v trivy >/dev/null; then
       # Offline misconfiguration scan (embedded checks bundle, no download).
       out="$(trivy config --quiet --skip-check-update --severity HIGH,CRITICAL --format json "$dir" 2>/dev/null \
         | jq -r '.Results[]? | .Target as $t | .Misconfigurations[]?

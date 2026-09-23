@@ -24,7 +24,7 @@
 - [x] jig-python (depends on pyright-lsp; ruff on edit; pyright + pytest on Stop; python-conventions skill; jig-init pins uv/ruff/pyright) — verified by: `tests/fixtures/py-sample`, `tests/python-hooks.bats` (22), `tests/jig-init.bats`, smoke (`claude -p`: LSP definition, ruff reformat on edit, Stop blocked on pyright error, fixed)
 - [x] jig-typescript (depends on typescript-lsp; biome or prettier+eslint on edit, detected per repo; tsc + vitest/`<pm> test` on Stop; typescript-conventions skill; jig-init pins per detected linter) — verified by: `tests/fixtures/ts-sample`, `tests/typescript-hooks.bats` (35), `tests/jig-init.bats`, smoke (`claude -p`: LSP definition, biome reformat on edit, LSP TS2322 diagnostic, Stop blocked on tsc error, fixed)
 - [x] jig-go (depends on gopls-lsp; goimports on edit; golangci-lint + go test on Stop for edited packages; go-conventions skill; jig-init pins golangci-lint/gopls/goimports) — verified by: `tests/fixtures/go-sample`, `tests/go-hooks.bats` (25), smoke (`claude -p`: LSP definition, goimports reformat on edit, Stop blocked on failing go test, fixed)
-- [ ] Hooks call the consuming repo's task runner when present (`mise run lint`), falling back to direct tool calls — verified by: bats
+- [x] Hooks call the consuming repo's task runner when present (`mise run lint`, run once by jig-core on Stop), falling back to direct tool calls (stack Stop hooks skip their static checks when the task exists) — verified by: `tests/lint-task.bats` (17), a skip test in each stack suite, a manual run against real mise
 
 ## Phase 3: distribution and pilot
 - [ ] CI for this repo: test, lint, validate on every MR — verified by: green pipeline

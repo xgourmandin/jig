@@ -18,6 +18,14 @@ edit()  { jq -nc --arg f "$1" '{session_id:"s1",tool_name:"Edit",tool_input:{fil
 stop()  { jq -nc --argjson a "${1:-false}" '{session_id:"s1",hook_event_name:"Stop",stop_hook_active:$a}' | bash "$SCRIPTS/go-stop-check.sh"; }
 CALC="calc/calc.go"
 
+# The repo defines a mise lint task (jig-core runs it); a fake mise is enough here.
+with_lint_task() {
+  printf '\n[tasks.lint]\nrun = "true"\n' >>mise.toml
+  MISEBIN="$BATS_TEST_TMPDIR/misebin"; mkdir -p "$MISEBIN"
+  printf '#!/bin/sh\nexit 0\n' >"$MISEBIN/mise"; chmod +x "$MISEBIN/mise"
+  export PATH="$MISEBIN:$PATH"
+}
+
 # Directory of fake binaries, to control what is "installed". Real ones can be
 # passed as "=name" (symlinked from PATH).
 stub_bin() {
@@ -133,6 +141,13 @@ stub_bin() {
   [ "$status" -eq 0 ]
   [ -z "$output" ]
   [ ! -e "$STATE" ]
+}
+@test "stop: lint task present -> golangci-lint skipped, go test still runs" {
+  with_lint_task
+  printf 'package calc\n\nimport "os"\n\n// Rm removes x.\nfunc Rm() { os.Remove("x") }\n' >calc/rm.go
+  edit "$REPO/calc/rm.go"
+  run stop
+  [ -z "$output" ]
 }
 @test "stop: failing test blocks with go test output" {
   sed -i 's/return a + b/return a - b/' "$CALC"

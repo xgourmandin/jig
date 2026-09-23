@@ -163,6 +163,16 @@ stub_bin() {
   [[ "$(jq -r .reason <<<"$output")" == *"(trivy config)"*"AWS-0107"* ]]
 }
 
+@test "stop: lint task present -> trivy skipped, validate still runs" {
+  stub_bin fake-tf
+  printf 'resource "aws_security_group" "ssh" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = "tcp"\n    cidr_blocks = ["0.0.0.0/0"]\n  }\n}\n' >sg.tf
+  edit "$REPO/sg.tf" || true
+  printf '[tasks.lint]\nrun = "true"\n' >mise.toml
+  printf '#!/bin/sh\nexit 0\n' >"$STUBS/mise"; chmod +x "$STUBS/mise"
+  PATH="$STUBS:$PATH" JIG_TF_BIN=fake-tf run stop
+  [ -z "$output" ]
+}
+
 # --- MCP wrapper: scripts/terraform-mcp.sh -------------------------------------
 @test "terraform mcp: fails with a clear message when the binary is missing" {
   stub_bin

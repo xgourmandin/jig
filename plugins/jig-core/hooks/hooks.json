@@ -1,5 +1,5 @@
 {
-  "description": "Jig core hooks: guardrails, session context, repo map status, progress enforcement",
+  "description": "Jig core hooks: guardrails, session context, repo map status, repo lint task and progress enforcement on Stop",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,18 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/record-edit.sh\"",
             "timeout": 10
           }
         ]
@@ -36,6 +48,11 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/require-progress.sh\"",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/lint-task.sh\"",
+            "timeout": 600
           }
         ]
       }

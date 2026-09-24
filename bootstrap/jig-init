@@ -187,8 +187,8 @@ for line in ".archgate/rules.d.ts" ".codebase-memory/"; do
   grep -qxF "$line" .gitignore || { echo "$line" >>.gitignore; say "ignored  $line"; }
 done
 
-# 6. Generated wiki: no CI job (an API key costs too much). Developers refresh
-# it from Claude Code with their own session and review it in a PR.
+# 6. Generated wiki: developers refresh it from Claude Code with their own
+# session and review it in a PR.
 (( openwiki )) && [[ ! -d openwiki ]] \
   && say "todo     ask Claude Code on a branch: \"Initialize this repository's OpenWiki\""
 

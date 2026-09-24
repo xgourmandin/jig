@@ -157,7 +157,7 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   [ "$(jq -r .extraKnownMarketplaces.jig.source.path .claude/settings.json)" = "$HARNESS" ]
 }
 
-@test "--openwiki enables jig-openwiki and pins node + openwiki, no CI job" {
+@test "--openwiki enables jig-openwiki and pins node + openwiki" {
   add main.tf
   run init --openwiki
   [ "$status" -eq 0 ]
@@ -167,7 +167,6 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   grep -q '^node = "' mise.toml
   grep -q '^OPENWIKI_TELEMETRY_DISABLED = "1"' mise.toml
   [[ "$output" == *"Initialize this repository's OpenWiki"* ]]
-  [ ! -e .github ] && [ ! -e ci ]
 }
 
 @test "OpenWiki opt-in sticks: later runs without the flag keep the plugin" {

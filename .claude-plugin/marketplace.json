@@ -23,8 +23,8 @@
     {
       "name": "jig-openwiki",
       "source": "./plugins/jig-openwiki",
-      "version": "0.1.0",
-      "description": "Opt-in generated repo wiki: OpenWiki driven locally by Claude Code (no API key, no CI job), reviewed in a PR."
+      "version": "0.1.1",
+      "description": "Opt-in generated repo wiki: OpenWiki driven locally by Claude Code, reviewed in a PR."
     },
     {
       "name": "jig-python",

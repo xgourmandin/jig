@@ -153,3 +153,6 @@ Decisions: lint only (no `mise run test`). Stack hooks already run targeted test
 Findings: mise didn't ask for trust for a tasks-only mise.toml in a scratch dir, so the untrusted branch is only a safety net.
 Next: Phase 3 (harness CI, tag v0.1.0, managed-settings snippet, pilot repos). Still open from Phase 1: security review of codebase-memory-mcp, human review of skills, OpenWiki run on a pilot repo.
 Blockers: marketplace URL still undecided.
+
+## 2026-09-23 — OpenWiki: drop the CI wording
+Done: removed the remaining "no CI job / no API key / not on a schedule" wording from DESIGN.md, READMEs, plugin/marketplace descriptions, the openwiki skill and jig-init; the jig-init test no longer checks for absent CI files. The wiki is described only as a local, Claude Code-driven flow. jig-openwiki 0.1.1.

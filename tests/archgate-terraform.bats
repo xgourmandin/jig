@@ -176,3 +176,15 @@ violation() {
     ls "$TEMPLATES"/adrs/"$id"-*.md >/dev/null || { echo "$id has no ADR template"; return 1; }
   done
 }
+
+@test "TF ADRs stay out of a Python-only change even if the files are present" {
+  mkdir src
+  echo 'x = 1' >src/app.py
+  git add -A && git -c user.name=t -c user.email=t@t commit -qm base
+  echo 'y = 2' >>src/app.py
+  run archgate check
+  [ "$status" -eq 0 ]
+  run archgate review-context
+  [[ "$output" == *"GEN-001"* ]]
+  [[ "$output" != *'"id":"TF-'* ]]
+}

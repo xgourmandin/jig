@@ -26,6 +26,19 @@
 - [x] jig-go (depends on gopls-lsp; goimports on edit; golangci-lint + go test on Stop for edited packages; go-conventions skill; jig-init pins golangci-lint/gopls/goimports) — verified by: `tests/fixtures/go-sample`, `tests/go-hooks.bats` (25), smoke (`claude -p`: LSP definition, goimports reformat on edit, Stop blocked on failing go test, fixed)
 - [x] Hooks call the consuming repo's task runner when present (`mise run lint`, run once by jig-core on Stop), falling back to direct tool calls (stack Stop hooks skip their static checks when the task exists) — verified by: `tests/lint-task.bats` (17), a skip test in each stack suite, a manual run against real mise
 
+## Phase 2b: Terraform ADRs + automated enforcement
+Layering: tflint (shipped config) for style, trivy for security, Archgate `.rules.ts` for repo/structure rules no linter has, bats to prove each rule fails on a bad example and passes on a good one. Opt-out: `# jig:allow <ADR-ID> <reason>` (reason required). Cloud-specific ADRs out of scope (trivy covers them).
+- [x] Spike: Archgate rules API (glob, grep, readFile; no HCL parser; do relative imports from `.rules.ts` work?) — verified by: notes in progress.md
+- [x] Shared HCL helper for rules, copied into each rule file because Archgate blocks imports (comment/string masking, block extraction, `jig:allow`) — verified by: bats
+- [x] TF-002 no provider/backend blocks in child modules (`modules/` path segment) — verified by: `tests/archgate-terraform.bats` fail + pass fixtures
+- [x] TF-006 root modules commit `.terraform.lock.hcl` — verified by: fail + pass fixtures
+- [x] TF-007 `prevent_destroy` on stateful resources in prod roots — verified by: fail + pass + allow-comment fixtures
+- [x] TF-009 no secrets in `.tfvars`/defaults, `sensitive = true` on secret variables — verified by: fail + pass fixtures
+- [x] TF-003 tflint config template (structure, naming, documented/typed variables and outputs) + ADR — verified by: tflint flags a bad fixture and passes tf-sample
+- [x] `jig-init` copies the TF ADRs, helper and `.tflint.hcl` for Terraform repos only — verified by: `tests/jig-init.bats`
+- [x] Skills reference ADR IDs; drift test (every template ADR is referenced by a skill and vice versa); jig-terraform version bump; DESIGN.md updated — verified by: `mise run test`, `mise run lint`
+- [ ] Dogfood on a pilot Terraform repo, note false-positive rate — verified by: progress.md
+
 ## Phase 3: distribution and pilot
 - [ ] CI for this repo: test, lint, validate on every MR — verified by: green pipeline
 - [ ] Tag v0.1.0; document upgrade process — verified by: tag exists, README section

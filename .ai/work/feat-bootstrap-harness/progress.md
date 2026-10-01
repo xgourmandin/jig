@@ -156,3 +156,20 @@ Blockers: marketplace URL still undecided.
 
 ## 2026-09-23 — OpenWiki: drop the CI wording
 Done: removed the remaining "no CI job / no API key / not on a schedule" wording from DESIGN.md, READMEs, plugin/marketplace descriptions, the openwiki skill and jig-init; the jig-init test no longer checks for absent CI files. The wiki is described only as a local, Claude Code-driven flow. jig-openwiki 0.1.1.
+
+## 2026-09-24 — jig-terraform: best-practice skills
+Done:
+- `terraform-conventions` rewritten from the HashiCorp style guide and the Google Cloud / AWS Terraform guides: file layout, naming (units, positive booleans), block order, variables (objects with `optional()`, defaults only for env-independent values), outputs (attributes, one per resource), expressions, `for_each`/`count`, implicit dependencies, provider/version pinning, secrets (ephemeral + write-only on >= 1.11), `moved`/`import`/`removed`, checks and conditions, `terraform test` with mocked providers. Also scoped to `*.tftest.hcl`. Details and examples in `writing.md`, read on demand.
+- New `terraform-architecture` skill (model-invocable, not path-scoped, so it's available when designing before any .tf is open): resource/service/root module levels, when to split state, layering, per-environment directories (no workspaces), cross-stack data (data sources > published values > remote state), backends, module versioning, repo layout, delivery.
+- jig-terraform 0.1.3.
+Next: human review of the skill content (listed as open in Phase 1).
+
+## 2026-10-02 — Terraform ADRs + automated enforcement
+Done:
+- Spike: Archgate rules get `glob`/`grep`/`grepFiles`/`readFile` but no HCL parser, and imports in `.rules.ts` are blocked by its security scan (only node:path/url/util/crypto). So each rule file carries a copy of a small HCL helper (comment/string/heredoc masking, brace-matched block extraction, `jig:allow`); a bats test checks the copies are identical. `ctx.glob` skips git-ignored files, so an ignored `.terraform.lock.hcl` counts as missing.
+- ADRs (templates in `bootstrap/templates/archgate/adrs/`): TF-002 (no provider/backend in child modules = path under `modules/`, excluding `examples/` and `tests/`), TF-006 (root module = has a provider or backend/cloud block; needs a committed lock file), TF-007 (prevent_destroy on ~30 stateful types in `prod|production|prd` paths), TF-009 (secret values in .tfvars, AWS key/private key material, secret-named variables without sensitive/ephemeral or with a default), TF-003 (docs-only, the tflint config). Opt-out: `# jig:allow TF-00X <reason>`, reason required.
+- `bootstrap/templates/tflint/.tflint.hcl`: tflint only reads the config in the module dir, so with `--recursive` the root config is ignored. The jig-init lint task now passes `--config "$PWD/.tflint.hcl"` and the edit hook uses the nearest `.tflint.hcl` up the tree. Fixture `tf-sample/modules/naming` split into standard files to satisfy `terraform_standard_module_structure`.
+- Tests: `tests/archgate-terraform.bats` (fail + pass per rule, allow comments, tf-sample false-positive guard, helper drift, skill/ADR drift), a hook test for the nearest config, jig-init assertions. 221 tests green; a real `mise run lint` on a jig-init'd tf-sample repo passes (archgate, fmt, tflint, trivy).
+- jig-terraform 0.1.4; conventions/architecture skills and README list the ADR IDs.
+Decisions: no cloud-specific ADRs (trivy covers them); first slice only TF-002/006/007/009 + tflint config.
+Next: dogfood on a pilot Terraform repo and record the false-positive rate (TF-007 type list, TF-009 name heuristics); later candidates TF-010 (workspaces), TF-011 (local-exec), TF-012 (module tests), TF-013 (count vs for_each).

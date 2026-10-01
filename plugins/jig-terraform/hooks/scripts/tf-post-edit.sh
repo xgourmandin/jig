@@ -30,7 +30,13 @@ fi
 
 # 2. tflint on the module directory (only for .tf files).
 if [[ "$file" == *.tf ]] && command -v tflint >/dev/null; then
-  if ! out="$(tflint --chdir="$dir" --format=compact --no-color 2>&1)"; then
+  # Use the nearest .tflint.hcl up the tree (tflint only reads the one in the module dir).
+  cfg=(); d="$dir"
+  while [[ "$d" != / ]]; do
+    [[ -f "$d/.tflint.hcl" ]] && { cfg=(--config="$d/.tflint.hcl"); break; }
+    d="$(dirname "$d")"
+  done
+  if ! out="$(tflint --chdir="$dir" "${cfg[@]}" --format=compact --no-color 2>&1)"; then
     problems+=$'tflint reported issues:\n'"$out"$'\n'
   fi
 fi

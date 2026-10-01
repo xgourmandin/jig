@@ -1,7 +1,7 @@
 {
   "name": "jig-terraform",
-  "version": "0.1.2",
-  "description": "Jig Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions and plan review skills, registry docs MCP.",
+  "version": "0.1.4",
+  "description": "Jig Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions, architecture and plan review skills, registry docs MCP.",
   "author": {
     "name": "Jig Platform Team"
   }

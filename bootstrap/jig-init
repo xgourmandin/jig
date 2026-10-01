@@ -147,7 +147,7 @@ else
     if (( has_tf )); then
       tf=terraform; (( tofu )) && tf=tofu
       echo "  \"$tf fmt -check -recursive\","
-      echo "  \"tflint --recursive\","
+      echo "  \"tflint --recursive --config \\\"\$PWD/.tflint.hcl\\\"\","
       echo "  \"trivy config --quiet --skip-check-update --severity HIGH,CRITICAL --exit-code 1 .\","
     fi
     if (( has_py )); then
@@ -174,13 +174,14 @@ fi
 place "$TEMPLATES/CLAUDE.md" CLAUDE.md
 place "$TEMPLATES/docs-ai/ARCHITECTURE.md" docs/ai/ARCHITECTURE.md
 (( has_tf )) && place "$TEMPLATES/claude-rules/terraform.md" .claude/rules/terraform.md
+(( has_tf )) && place "$TEMPLATES/tflint/.tflint.hcl" .tflint.hcl
 (( has_ts )) && [[ ! -d node_modules ]] \
   && say "note     run your package install (npm ci / pnpm i) so the TypeScript LSP finds tsserver"
 
 # 5. ADRs (Archgate CLI; its Claude plugin is not used).
 place "$TEMPLATES/archgate/adrs/GEN-001-record-decisions-as-adrs.md" .archgate/adrs/GEN-001-record-decisions-as-adrs.md
 if (( has_tf )); then
-  for f in "$TEMPLATES"/archgate/adrs/TF-001-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
+  for f in "$TEMPLATES"/archgate/adrs/TF-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
 fi
 touch .gitignore
 for line in ".archgate/rules.d.ts" ".codebase-memory/"; do

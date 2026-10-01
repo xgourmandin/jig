@@ -23,7 +23,11 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   grep -q '^terraform = "' mise.toml
   grep -q '^tflint = ' mise.toml
   grep -q 'terraform-mcp-server" = ' mise.toml
-  grep -q '"tflint --recursive"' mise.toml
+  grep -q 'tflint --recursive --config' mise.toml
+  [ -f .tflint.hcl ]
+  for f in TF-002-no-provider-in-child-modules TF-006-root-modules-commit-lock-file TF-007-prevent-destroy-stateful-prod TF-009-no-secrets-in-code; do
+    [ -f ".archgate/adrs/$f.md" ] && [ -f ".archgate/adrs/$f.rules.ts" ]
+  done
   grep -q '^ARCHGATE_TELEMETRY = "0"' mise.toml
   [ -f .claude/rules/terraform.md ]
   [ -f .archgate/adrs/TF-001-pin-module-sources.rules.ts ]
@@ -46,6 +50,8 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   ! grep -q openwiki mise.toml
   [ ! -e .claude/rules/terraform.md ]
   [ ! -e .archgate/adrs/TF-001-pin-module-sources.md ]
+  [ ! -e .tflint.hcl ]
+  ! compgen -G '.archgate/adrs/TF-*' >/dev/null
   [ -f .archgate/adrs/GEN-001-record-decisions-as-adrs.md ]
 }
 

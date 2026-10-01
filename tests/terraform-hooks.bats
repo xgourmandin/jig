@@ -85,6 +85,30 @@ stub_bin() {
   [ "$status" -eq 2 ]
   [[ "$output" == *"tflint reported issues"* ]]
 }
+@test "post-edit: uses the nearest .tflint.hcl up the tree" {
+  mkdir -p live/dev
+  cat >live/dev/main.tf <<'HCL'
+terraform {
+  required_version = ">= 1.9"
+}
+
+variable "BadName" {
+  type        = string
+  description = "Camel case."
+}
+
+output "o" {
+  description = "Echo."
+  value       = var.BadName
+}
+HCL
+  run edit "$REPO/live/dev/main.tf"
+  [ "$status" -eq 0 ]
+  cp "$BATS_TEST_DIRNAME/../bootstrap/templates/tflint/.tflint.hcl" .tflint.hcl
+  run edit "$REPO/live/dev/main.tf"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"terraform_naming_convention"* ]]
+}
 @test "post-edit: fails open when no tools are installed" {
   stub_bin
   printf 'variable "x" {\n' >bad.tf

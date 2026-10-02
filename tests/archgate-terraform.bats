@@ -58,7 +58,7 @@ violation() {
   run archgate check
   [ "$status" -eq 0 ]
 }
-@test "TF-002 honours jig:allow with a reason" {
+@test "TF-002 honours archgate-ignore with a reason" {
   use 002-pass-allow
   run archgate check
   [ "$status" -eq 0 ]
@@ -112,16 +112,16 @@ violation() {
   run archgate check
   [ "$status" -eq 0 ]
 }
-@test "TF-007 honours jig:allow with a reason" {
+@test "TF-007 honours archgate-ignore with a reason" {
   use 007-pass-allow
   run archgate check
   [ "$status" -eq 0 ]
 }
-@test "TF-007 rejects jig:allow without a reason" {
+@test "TF-007 rejects archgate-ignore without a reason" {
   use 007-fail-allow-no-reason
   run archgate check
   violation stateful-resource-prevent-destroy live/prod/db.tf 2
-  [[ "$output" == *"needs a reason"* ]]
+  [[ "$output" == *"missing a reason"* ]]
 }
 
 # TF-009
@@ -152,7 +152,7 @@ violation() {
   run archgate check
   [ "$status" -eq 0 ]
 }
-@test "TF-009 honours jig:allow with a reason" {
+@test "TF-009 honours archgate-ignore with a reason" {
   use 009-pass-allow
   run archgate check
   [ "$status" -eq 0 ]

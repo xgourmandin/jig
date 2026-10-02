@@ -11,6 +11,7 @@ export default {
               message: "Git module source is not pinned; add ?ref=<tag or commit>",
               file: m.file,
               line: m.line,
+              fix: "Append ?ref=<tag or commit SHA> to the source",
             });
           }
         }

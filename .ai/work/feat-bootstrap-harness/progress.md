@@ -173,3 +173,8 @@ Done:
 - jig-terraform 0.1.4; conventions/architecture skills and README list the ADR IDs.
 Decisions: no cloud-specific ADRs (trivy covers them); first slice only TF-002/006/007/009 + tflint config.
 Next: dogfood on a pilot Terraform repo and record the false-positive rate (TF-007 type list, TF-009 name heuristics); later candidates TF-010 (workspaces), TF-011 (local-exec), TF-012 (module tests), TF-013 (count vs for_each).
+
+## 2026-10-02 — Archgate rules reworked
+- Reviewed all `.rules.ts` against https://cli.archgate.dev/guides/writing-rules. Rules now read `ctx.scopedFiles` (no repeated globs), filter by path before reading, read files in parallel (`jigSources` / `jigGoSources`), and report a `fix` (convention `"<problem>; <remedy>"`).
+- Replaced the custom `jig:allow` with Archgate's built-in `archgate-ignore <ADR-ID>/<rule-id> <reason>` (next line only; a missing reason keeps the violation and warns; a stale one warns, fails only under `--strict`). `jigAllow` and the no-reason branches are gone from every helper; ADRs, fixtures, bats tests and docs updated. Trailing same-line exceptions moved to the line before.
+- Not adopted: `ctx.ast` (subprocess per Python file, shifted TS lines, no `.vue`/`.svelte`/`.astro`), `ctx.changedFiles` (results would depend on git state).

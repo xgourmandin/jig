@@ -1,0 +1,10 @@
+{
+  // Vite style
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"], "@ui/*": ["src/components/*"], },
+  },
+  "include": ["src"],
+}

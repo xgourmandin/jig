@@ -216,3 +216,44 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   ARCHGATE_TELEMETRY=0 run archgate check
   [ "$status" -eq 0 ]
 }
+
+@test "py repo gets PY ADRs only; go repo gets GO ADRs only" {
+  add app/main.py
+  run init
+  [ "$status" -eq 0 ]
+  [ -f .archgate/adrs/PY-001-domain-has-no-outward-imports.md ]
+  compgen -G '.archgate/adrs/PY-*.rules.ts' >/dev/null
+  ! compgen -G '.archgate/adrs/GO-*' >/dev/null
+  ! compgen -G '.archgate/adrs/TF-*' >/dev/null
+  rm -rf "$BATS_TEST_TMPDIR/repo2"; mkdir "$BATS_TEST_TMPDIR/repo2"; cd "$BATS_TEST_TMPDIR/repo2"
+  git init -q
+  add go.mod
+  run init
+  [ "$status" -eq 0 ]
+  [ -f .archgate/adrs/GO-001-domain-is-pure.md ]
+  compgen -G '.archgate/adrs/GO-*.rules.ts' >/dev/null
+  ! compgen -G '.archgate/adrs/PY-*' >/dev/null
+}
+
+@test "ts repo gets TS ADRs only, and no PY/GO/TF ADRs" {
+  add package.json '{"name":"x"}'
+  add tsconfig.json '{}'
+  run init
+  [ "$status" -eq 0 ]
+  [ -f .archgate/adrs/TS-001-domain-has-no-outward-imports.md ]
+  [ -f .archgate/adrs/TS-010-typescript-style-and-types-via-tooling.md ]
+  [ -f .archgate/adrs/TS-011-ui-does-not-touch-adapters-or-io.md ]
+  compgen -G '.archgate/adrs/TS-*.rules.ts' >/dev/null
+  ! compgen -G '.archgate/adrs/PY-*' >/dev/null
+  ! compgen -G '.archgate/adrs/GO-*' >/dev/null
+  ! compgen -G '.archgate/adrs/TF-*' >/dev/null
+  ARCHGATE_TELEMETRY=0 run archgate check
+  [ "$status" -eq 0 ]
+}
+
+@test "python repo does not get TS ADRs" {
+  add app/main.py
+  run init
+  [ "$status" -eq 0 ]
+  ! compgen -G '.archgate/adrs/TS-*' >/dev/null
+}

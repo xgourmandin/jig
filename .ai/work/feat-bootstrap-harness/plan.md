@@ -27,9 +27,9 @@
 - [x] Hooks call the consuming repo's task runner when present (`mise run lint`, run once by jig-core on Stop), falling back to direct tool calls (stack Stop hooks skip their static checks when the task exists) — verified by: `tests/lint-task.bats` (17), a skip test in each stack suite, a manual run against real mise
 
 ## Phase 2b: Terraform ADRs + automated enforcement
-Layering: tflint (shipped config) for style, trivy for security, Archgate `.rules.ts` for repo/structure rules no linter has, bats to prove each rule fails on a bad example and passes on a good one. Opt-out: `# jig:allow <ADR-ID> <reason>` (reason required). Cloud-specific ADRs out of scope (trivy covers them).
+Layering: tflint (shipped config) for style, trivy for security, Archgate `.rules.ts` for repo/structure rules no linter has, bats to prove each rule fails on a bad example and passes on a good one. Opt-out: `archgate-ignore <ADR-ID>/<rule-id> <reason>` on the line before (reason required; replaced the custom `jig:allow`). Cloud-specific ADRs out of scope (trivy covers them).
 - [x] Spike: Archgate rules API (glob, grep, readFile; no HCL parser; do relative imports from `.rules.ts` work?) — verified by: notes in progress.md
-- [x] Shared HCL helper for rules, copied into each rule file because Archgate blocks imports (comment/string masking, block extraction, `jig:allow`) — verified by: bats
+- [x] Shared HCL helper for rules, copied into each rule file because Archgate blocks imports (comment/string masking, block extraction) — verified by: bats
 - [x] TF-002 no provider/backend blocks in child modules (`modules/` path segment) — verified by: `tests/archgate-terraform.bats` fail + pass fixtures
 - [x] TF-006 root modules commit `.terraform.lock.hcl` — verified by: fail + pass fixtures
 - [x] TF-007 `prevent_destroy` on stateful resources in prod roots — verified by: fail + pass + allow-comment fixtures

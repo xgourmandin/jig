@@ -14,7 +14,7 @@ State and plan files hold plaintext values, and Git history is forever. `sensiti
 ## Decision
 Committed `.tfvars` files and `.tf` files hold no secret values (passwords, tokens, API or access keys, private keys). Variables whose name looks like a secret set `sensitive = true` (or `ephemeral = true`) and have no default. Secrets are read at apply time from a secrets manager; on Terraform/OpenTofu 1.11+ prefer ephemeral resources and write-only arguments. The name check skips names ending in `_arn`, `_id`, `_name`, `_path`, `_file`, `_url`, `_ttl`, `_seconds`, `_version`.
 
-Opt out for one block with a comment `# jig:allow TF-009 <reason>` on the line before it or inside it. The reason is required.
+Opt out for one block with a comment `# archgate-ignore TF-009/<rule> <reason>` (`<rule>` is `no-secret-values` or `secret-variables-sensitive`) on the line before it. The reason is required, without one the violation stays.
 
 ## Do's and Don'ts
 ### Do

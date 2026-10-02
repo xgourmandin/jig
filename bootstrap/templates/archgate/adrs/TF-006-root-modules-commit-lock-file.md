@@ -14,7 +14,7 @@ Without a committed dependency lock file, `init` picks the newest provider match
 ## Decision
 Every root module (a directory outside `modules/`, `examples/` and `tests/` that has a `provider` block or a `backend`/`cloud` block) has a `.terraform.lock.hcl` next to it, committed to Git and not git-ignored. Provider constraints in root modules use `~>`; tflint (TF-003) checks that constraints exist.
 
-Opt out for one block with a comment `# jig:allow TF-006 <reason>` on the line before it or inside it. The reason is required.
+Opt out for one block with a comment `# archgate-ignore TF-006/root-module-has-lock-file <reason>` on the line before it. The reason is required, without one the violation stays.
 
 ## Do's and Don'ts
 ### Do

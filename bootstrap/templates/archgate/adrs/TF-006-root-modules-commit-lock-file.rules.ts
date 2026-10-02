@@ -91,20 +91,15 @@ function jigBlocks(raw: string, masked: string = jigMask(raw)): JigBlock[] {
   return out;
 }
 
-// `# jig:allow <ID> <reason>` on the line before a block or inside it.
-// Returns "allowed", "no-reason" (comment present but no reason given) or null.
-function jigAllow(raw: string, line: number, endLine: number, id: string): "allowed" | "no-reason" | null {
-  const lines = raw.split("\n").slice(Math.max(0, line - 2), endLine);
-  for (const l of lines) {
-    const m = new RegExp("jig:allow\\s+" + id + "\\b(.*)").exec(l);
-    if (m) return m[1].trim() ? "allowed" : "no-reason";
-  }
-  return null;
-}
-
 const jigLineOf = (raw: string, offset: number) => raw.slice(0, offset).split("\n").length;
-const jigTf = async (ctx: RuleContext, pattern = "**/*.tf") =>
-  (await ctx.glob(pattern)).filter((f) => !/(^|\/)\.terraform\//.test(f));
+// .tf sources (plus .tfvars when `tfvars`) whose path passes `keep`, read in parallel.
+async function jigSources(ctx: RuleContext, keep: (file: string) => boolean = () => true, tfvars = false) {
+  const files = ctx.scopedFiles
+    .filter((f) => (f.endsWith(".tf") || (tfvars && f.endsWith(".tfvars"))) && !/(^|\/)\.terraform\//.test(f) && keep(f))
+    .sort();
+  const raws = await Promise.all(files.map((f) => ctx.readFile(f)));
+  return files.map((file, i) => ({ file, raw: raws[i] }));
+}
 const jigIsChild = (f: string) => /(^|\/)modules\//.test(f) && !/(^|\/)(examples|tests)\//.test(f);
 const jigIsExample = (f: string) => /(^|\/)(examples|tests)\//.test(f);
 // </jig-hcl-helpers>
@@ -115,8 +110,7 @@ export default {
       description: "Root modules commit .terraform.lock.hcl",
       async check(ctx) {
         const dirs = new Map<string, { file: string; line: number }>();
-        for (const file of (await jigTf(ctx)).filter((f) => !jigIsChild(f) && !jigIsExample(f))) {
-          const raw = await ctx.readFile(file);
+        for (const { file, raw } of await jigSources(ctx, (f) => !jigIsChild(f) && !jigIsExample(f))) {
           const dir = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : ".";
           for (const b of jigBlocks(raw)) {
             const isRoot =
@@ -129,8 +123,6 @@ export default {
         const locks = new Set((await ctx.glob("**/.terraform.lock.hcl")).map((f) => (f.includes("/") ? f.slice(0, f.lastIndexOf("/")) : ".")));
         for (const [dir, at] of dirs) {
           if (!locks.has(dir)) {
-            const raw = await ctx.readFile(at.file);
-            if (jigAllow(raw, at.line, at.line, "TF-006") === "allowed") continue;
             ctx.report.violation({
               message: `Root module ${dir} has no committed .terraform.lock.hcl`,
               file: at.file,

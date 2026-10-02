@@ -10,7 +10,7 @@ Enable in repos that contain Terraform or OpenTofu.
 | Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing |
 | Skill | `skills/terraform-conventions` | Jig writing conventions (layout, naming, variables, expressions, secrets, safety, tests), loaded automatically for `.tf`/`.tfvars`/`.tftest.hcl` files; details and examples in `writing.md`, read on demand |
 | Skill | `skills/terraform-architecture` | Module levels, splitting state into stacks, environments, cross-stack data, module versioning, repo layout |
-| ADRs (templates) | `bootstrap/templates/archgate/adrs/TF-*`, `bootstrap/templates/tflint/.tflint.hcl` | Copied by `jig-init`: TF-001/002/006/007/009 with Archgate rules, TF-003 documents the shared tflint config. Enforced by `archgate check` in `mise run lint`; exceptions via `# jig:allow TF-00X <reason>` |
+| ADRs (templates) | `bootstrap/templates/archgate/adrs/TF-*`, `bootstrap/templates/tflint/.tflint.hcl` | Copied by `jig-init`: TF-001/002/006/007/009 with Archgate rules, TF-003 documents the shared tflint config. Enforced by `archgate check` in `mise run lint`; exceptions via `# archgate-ignore TF-00X/<rule-id> <reason>` |
 | Skill | `skills/tf-plan-review` | Plan-only risk review (prefers the CI plan) |
 | Registry docs (MCP) | `.mcp.json`, `scripts/terraform-mcp.sh` | HashiCorp terraform-mcp-server, `registry` toolset only (public provider/module docs, no HCP/TFE operations, no token) |
 

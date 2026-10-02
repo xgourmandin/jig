@@ -1,0 +1,1 @@
+{ "compilerOptions": { "paths": { "@pg/*": ["./src/adapters/postgres/*"] } } }

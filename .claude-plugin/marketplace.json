@@ -17,7 +17,7 @@
     {
       "name": "jig-terraform",
       "source": "./plugins/jig-terraform",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "description": "Terraform/OpenTofu stack: terraform-ls code intelligence, fmt/tflint on edit, offline validate + trivy on Stop, conventions, architecture and plan review skills, registry docs MCP."
     },
     {

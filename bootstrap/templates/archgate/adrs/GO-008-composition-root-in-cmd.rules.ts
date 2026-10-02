@@ -1,0 +1,142 @@
+/// <reference path="../rules.d.ts" />
+// <jig-go-helpers>
+// Rule files cannot import each other (archgate blocks imports), so this block is
+// copied verbatim into every GO-*.rules.ts; tests/archgate-go.bats checks they match.
+// Layout assumed: internal/{domain,app,ports,adapters/<name>}/ and cmd/<binary>/.
+
+// Same-length copy of `src` with comments blanked and, unless keepStrings, string/rune contents blanked.
+function jigMask(src: string, keepStrings = false): string {
+  const n = src.length;
+  const blank = (s: string) => s.replace(/[^\n]/g, " ");
+  let out = "";
+  let i = 0;
+  while (i < n) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === "/" && d === "/") {
+      let j = src.indexOf("\n", i);
+      if (j < 0) j = n;
+      out += blank(src.slice(i, j));
+      i = j;
+    } else if (c === "/" && d === "*") {
+      let j = src.indexOf("*/", i + 2);
+      j = j < 0 ? n : j + 2;
+      out += blank(src.slice(i, j));
+      i = j;
+    } else if (c === '"' || c === "`" || c === "'") {
+      let j = i + 1;
+      while (j < n && src[j] !== c) {
+        if (c !== "`" && src[j] === "\\") j++;
+        else if (c !== "`" && src[j] === "\n") break;
+        j++;
+      }
+      j = Math.min(j, n);
+      const closed = j < n && src[j] === c;
+      const end = closed ? j + 1 : j;
+      if (keepStrings) out += src.slice(i, end);
+      else out += closed ? c + blank(src.slice(i + 1, j)) + c : blank(src.slice(i, end));
+      i = end;
+    } else { out += c; i++; }
+  }
+  return out;
+}
+
+const jigLineOf = (raw: string, offset: number) => raw.slice(0, offset).split("\n").length;
+
+// Index of the `}` matching the `{` at `open` in masked source (or the end).
+function jigClose(masked: string, open: number): number {
+  let depth = 0;
+  for (let i = open; i < masked.length; i++) {
+    if (masked[i] === "{") depth++;
+    else if (masked[i] === "}" && --depth === 0) return i;
+  }
+  return masked.length;
+}
+
+// Non-test, non-vendored Go sources whose path passes `keep`, read in parallel. Filtering by path first means files
+// of unrelated layers are never read.
+async function jigGoSources(ctx: RuleContext, keep: (file: string) => boolean = () => true) {
+  const files = ctx.scopedFiles
+    .filter((f) => f.endsWith(".go") && !/(^|\/)(vendor|testdata|node_modules|\.git)\//.test(f) && !/_test\.go$/.test(f) && keep(f))
+    .sort();
+  const raws = await Promise.all(files.map((f) => ctx.readFile(f)));
+  return files.map((file, i) => ({ file, raw: raws[i] }));
+}
+
+// Layer of a file under internal/: domain | app | ports | adapters (+ adapter name).
+function jigFileLayer(file: string): { layer: string; sub?: string } | null {
+  const m = /(?:^|\/)internal\/(domain|app|ports|adapters)(?:\/([^/]+))?\//.exec(file);
+  return m ? { layer: m[1], sub: m[2] } : null;
+}
+const jigInCmd = (file: string) => /(^|\/)cmd\//.test(file);
+
+// Layer of an import path (same shape as jigFileLayer, plus "cmd").
+function jigImportLayer(path: string): { layer: string; sub?: string } | null {
+  if (/(^|\/)cmd(\/|$)/.test(path)) return { layer: "cmd" };
+  const m = /(?:^|\/)internal\/(domain|app|ports|adapters)(?:\/([^/]+))?(?:\/|$)/.exec(path);
+  return m ? { layer: m[1], sub: m[2] } : null;
+}
+
+// Infrastructure and framework packages the inner layers must not import. Extend as needed.
+const JIG_INFRA_EXACT = new Set(["net", "os"]);
+const JIG_INFRA_PREFIX = [
+  "net/http", "database/sql", "os/exec", "os/signal",
+  "gorm.io/", "github.com/jmoiron/sqlx", "github.com/jackc/pgx", "github.com/lib/pq", "github.com/go-sql-driver/",
+  "github.com/mattn/go-sqlite3", "github.com/aws/aws-sdk-go", "cloud.google.com/go", "google.golang.org/grpc",
+  "google.golang.org/api", "github.com/Azure/azure-sdk-for-go", "github.com/gin-gonic/", "github.com/labstack/echo",
+  "github.com/go-chi/chi", "github.com/gorilla/", "github.com/gofiber/", "github.com/redis/", "github.com/go-redis/",
+  "go.mongodb.org/", "github.com/segmentio/kafka-go", "github.com/IBM/sarama", "github.com/nats-io/", "github.com/spf13/cobra",
+];
+const jigIsInfra = (path: string) =>
+  JIG_INFRA_EXACT.has(path) || JIG_INFRA_PREFIX.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p || path.startsWith(p + "/")));
+
+// Imports of a Go file with their line numbers (comments ignored).
+function jigGoImports(raw: string): { path: string; line: number }[] {
+  const out: { path: string; line: number }[] = [];
+  let inBlock = false;
+  jigMask(raw, true).split("\n").forEach((l, idx) => {
+    let m: RegExpExecArray | null;
+    if (inBlock) {
+      if (/^\)/.test(l)) inBlock = false;
+      else if ((m = /^\s*(?:[\w.]+\s+)?"([^"]+)"/.exec(l))) out.push({ path: m[1], line: idx + 1 });
+    } else if (/^import\s*\(/.test(l)) {
+      inBlock = !/\)\s*$/.test(l);
+      if (!inBlock) for (const s of l.matchAll(/"([^"]+)"/g)) out.push({ path: s[1], line: idx + 1 });
+    } else if ((m = /^import\s+(?:[\w.]+\s+)?"([^"]+)"/.exec(l))) out.push({ path: m[1], line: idx + 1 });
+  });
+  return out;
+}
+
+// Report a violation. Exceptions are `archgate-ignore` comments, handled by archgate itself.
+function jigReport(ctx: RuleContext, file: string, line: number, message: string, fix: string) {
+  ctx.report.violation({ message, file, line, fix });
+}
+// </jig-go-helpers>
+
+export default {
+  rules: {
+    "composition-root-in-cmd": {
+      description: "func main and adapter wiring live only in cmd/",
+      async check(ctx) {
+        for (const { file, raw } of await jigGoSources(ctx, (f) => !jigInCmd(f))) {
+          const masked = jigMask(raw);
+          if (/^package[ \t]+main\b/m.test(masked)) {
+            const m = /^func[ \t]+main[ \t]*\(\)/m.exec(masked);
+            if (m) {
+              const line = jigLineOf(raw, m.index);
+              jigReport(ctx, file, line, "func main outside cmd/", "Move the binary to cmd/<name>/main.go");
+            }
+          }
+          const fl = jigFileLayer(file);
+          // Files under internal/{domain,app,ports,adapters} are covered by GO-001..GO-003.
+          if (fl) continue;
+          for (const imp of jigGoImports(raw)) {
+            if (jigImportLayer(imp.path)?.layer !== "adapters") continue;
+            jigReport(ctx, file, imp.line, `Adapter "${imp.path}" is wired outside cmd/`,
+              "Construct adapters and inject them in cmd/<binary>/main.go");
+          }
+        }
+      },
+    },
+  },
+} satisfies RuleSet;

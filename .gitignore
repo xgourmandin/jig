@@ -2,3 +2,4 @@
 tfplan
 tfplan.json
 .terraform/
+.idea

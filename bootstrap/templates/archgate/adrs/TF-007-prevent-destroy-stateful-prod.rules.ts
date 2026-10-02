@@ -91,20 +91,15 @@ function jigBlocks(raw: string, masked: string = jigMask(raw)): JigBlock[] {
   return out;
 }
 
-// `# jig:allow <ID> <reason>` on the line before a block or inside it.
-// Returns "allowed", "no-reason" (comment present but no reason given) or null.
-function jigAllow(raw: string, line: number, endLine: number, id: string): "allowed" | "no-reason" | null {
-  const lines = raw.split("\n").slice(Math.max(0, line - 2), endLine);
-  for (const l of lines) {
-    const m = new RegExp("jig:allow\\s+" + id + "\\b(.*)").exec(l);
-    if (m) return m[1].trim() ? "allowed" : "no-reason";
-  }
-  return null;
-}
-
 const jigLineOf = (raw: string, offset: number) => raw.slice(0, offset).split("\n").length;
-const jigTf = async (ctx: RuleContext, pattern = "**/*.tf") =>
-  (await ctx.glob(pattern)).filter((f) => !/(^|\/)\.terraform\//.test(f));
+// .tf sources (plus .tfvars when `tfvars`) whose path passes `keep`, read in parallel.
+async function jigSources(ctx: RuleContext, keep: (file: string) => boolean = () => true, tfvars = false) {
+  const files = ctx.scopedFiles
+    .filter((f) => (f.endsWith(".tf") || (tfvars && f.endsWith(".tfvars"))) && !/(^|\/)\.terraform\//.test(f) && keep(f))
+    .sort();
+  const raws = await Promise.all(files.map((f) => ctx.readFile(f)));
+  return files.map((file, i) => ({ file, raw: raws[i] }));
+}
 const jigIsChild = (f: string) => /(^|\/)modules\//.test(f) && !/(^|\/)(examples|tests)\//.test(f);
 const jigIsExample = (f: string) => /(^|\/)(examples|tests)\//.test(f);
 // </jig-hcl-helpers>
@@ -129,21 +124,16 @@ export default {
     "stateful-resource-prevent-destroy": {
       description: "Stateful resources in production roots set lifecycle { prevent_destroy = true }",
       async check(ctx) {
-        for (const file of (await jigTf(ctx)).filter((f) => PROD.test(f) && !jigIsChild(f) && !jigIsExample(f))) {
-          const raw = await ctx.readFile(file);
+        for (const { file, raw } of await jigSources(ctx, (f) => PROD.test(f) && !jigIsChild(f) && !jigIsExample(f))) {
           for (const b of jigBlocks(raw)) {
             if (b.type !== "resource" || !STATEFUL.has(b.labels[0])) continue;
             const guarded = jigBlocks(b.raw, b.body).some((n) => n.type === "lifecycle" && /\bprevent_destroy\s*=\s*true\b/.test(n.body));
             if (guarded) continue;
-            const allow = jigAllow(raw, b.line, jigLineOf(raw, b.end), "TF-007");
-            if (allow === "allowed") continue;
             ctx.report.violation({
-              message: allow === "no-reason"
-                ? `jig:allow TF-007 on ${b.labels.join(".")} needs a reason`
-                : `${b.labels.join(".")} is stateful and has no lifecycle { prevent_destroy = true }`,
+              message: `${b.labels.join(".")} is stateful and has no lifecycle { prevent_destroy = true }`,
               file,
               line: b.line,
-              fix: "Add lifecycle { prevent_destroy = true } (and the provider's deletion protection), or `# jig:allow TF-007 <reason>`",
+              fix: "Add lifecycle { prevent_destroy = true } (and the provider's deletion protection)",
             });
           }
         }

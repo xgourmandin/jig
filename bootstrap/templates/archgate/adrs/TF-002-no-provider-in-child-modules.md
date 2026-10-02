@@ -14,7 +14,7 @@ A provider or backend block inside a reusable module forces every caller to inhe
 ## Decision
 Modules under a `modules/` directory declare `required_providers` (minimum versions) but never contain `provider`, `backend` or `cloud` blocks. Callers configure providers in the root module and pass aliases with `providers = { ... }`. Runnable examples under `examples/` and `tests/` are root modules and are exempt.
 
-Opt out for one block with a comment `# jig:allow TF-002 <reason>` on the line before it or inside it. The reason is required.
+Opt out for one block with a comment `# archgate-ignore TF-002/no-provider-or-backend-in-child-module <reason>` on the line before it. The reason is required, without one the violation stays.
 
 ## Do's and Don'ts
 ### Do

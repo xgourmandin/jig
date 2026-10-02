@@ -9,7 +9,7 @@ set -euo pipefail
 
 HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATES="$HARNESS/bootstrap/templates"
-PLACEHOLDER_URL="https://git.example.com/TODO/jig-claude-harness.git"
+PLACEHOLDER_URL="https://github.com/xgourmandin/jig.git"
 
 url="${JIG_MARKETPLACE_URL:-$PLACEHOLDER_URL}"
 tofu=0 openwiki=0 install=1 repo="."
@@ -182,6 +182,15 @@ place "$TEMPLATES/docs-ai/ARCHITECTURE.md" docs/ai/ARCHITECTURE.md
 place "$TEMPLATES/archgate/adrs/GEN-001-record-decisions-as-adrs.md" .archgate/adrs/GEN-001-record-decisions-as-adrs.md
 if (( has_tf )); then
   for f in "$TEMPLATES"/archgate/adrs/TF-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
+fi
+if (( has_py )); then
+  for f in "$TEMPLATES"/archgate/adrs/PY-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
+fi
+if (( has_go )); then
+  for f in "$TEMPLATES"/archgate/adrs/GO-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
+fi
+if (( has_ts )); then
+  for f in "$TEMPLATES"/archgate/adrs/TS-*; do place "$f" ".archgate/adrs/$(basename "$f")"; done
 fi
 touch .gitignore
 for line in ".archgate/rules.d.ts" ".codebase-memory/"; do

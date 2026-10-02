@@ -91,20 +91,15 @@ function jigBlocks(raw: string, masked: string = jigMask(raw)): JigBlock[] {
   return out;
 }
 
-// `# jig:allow <ID> <reason>` on the line before a block or inside it.
-// Returns "allowed", "no-reason" (comment present but no reason given) or null.
-function jigAllow(raw: string, line: number, endLine: number, id: string): "allowed" | "no-reason" | null {
-  const lines = raw.split("\n").slice(Math.max(0, line - 2), endLine);
-  for (const l of lines) {
-    const m = new RegExp("jig:allow\\s+" + id + "\\b(.*)").exec(l);
-    if (m) return m[1].trim() ? "allowed" : "no-reason";
-  }
-  return null;
-}
-
 const jigLineOf = (raw: string, offset: number) => raw.slice(0, offset).split("\n").length;
-const jigTf = async (ctx: RuleContext, pattern = "**/*.tf") =>
-  (await ctx.glob(pattern)).filter((f) => !/(^|\/)\.terraform\//.test(f));
+// .tf sources (plus .tfvars when `tfvars`) whose path passes `keep`, read in parallel.
+async function jigSources(ctx: RuleContext, keep: (file: string) => boolean = () => true, tfvars = false) {
+  const files = ctx.scopedFiles
+    .filter((f) => (f.endsWith(".tf") || (tfvars && f.endsWith(".tfvars"))) && !/(^|\/)\.terraform\//.test(f) && keep(f))
+    .sort();
+  const raws = await Promise.all(files.map((f) => ctx.readFile(f)));
+  return files.map((file, i) => ({ file, raw: raws[i] }));
+}
 const jigIsChild = (f: string) => /(^|\/)modules\//.test(f) && !/(^|\/)(examples|tests)\//.test(f);
 const jigIsExample = (f: string) => /(^|\/)(examples|tests)\//.test(f);
 // </jig-hcl-helpers>
@@ -119,16 +114,17 @@ export default {
     "no-secret-values": {
       description: "No secret values in .tfvars or .tf files",
       async check(ctx) {
-        const files = [...(await jigTf(ctx)), ...(await jigTf(ctx, "**/*.tfvars"))];
-        for (const file of files) {
-          const raw = await ctx.readFile(file);
+        for (const { file, raw } of await jigSources(ctx, () => true, true)) {
           const lines = raw.split("\n");
           lines.forEach((text, i) => {
             if (/^\s*(#|\/\/)/.test(text)) return;
-            const allow = jigAllow(raw, i + 1, i + 1, "TF-009");
-            if (allow === "allowed") return;
             if (KEY_MATERIAL.test(text)) {
-              ctx.report.violation({ message: "Access key id or private key material in code", file, line: i + 1 });
+              ctx.report.violation({
+                message: "Access key id or private key material in code",
+                file,
+                line: i + 1,
+                fix: "Remove it, rotate the credential, and read it from a secrets manager or the pipeline",
+              });
               return;
             }
             const kv = /^\s*([A-Za-z_][\w-]*)\s*=\s*"([^"]+)"/.exec(text);
@@ -147,22 +143,25 @@ export default {
     "secret-variables-sensitive": {
       description: "Variables with secret-like names are sensitive and have no default",
       async check(ctx) {
-        for (const file of await jigTf(ctx)) {
-          const raw = await ctx.readFile(file);
+        for (const { file, raw } of await jigSources(ctx)) {
           for (const b of jigBlocks(raw)) {
             if (b.type !== "variable" || !looksSecret(b.labels[0] ?? "")) continue;
-            const allow = jigAllow(raw, b.line, jigLineOf(raw, b.end), "TF-009");
-            if (allow === "allowed") continue;
             const name = b.labels[0];
-            if (allow === "no-reason") {
-              ctx.report.violation({ message: `jig:allow TF-009 on variable ${name} needs a reason`, file, line: b.line });
-              continue;
-            }
             if (!/\b(sensitive|ephemeral)\s*=\s*true\b/.test(b.body)) {
-              ctx.report.violation({ message: `variable "${name}" looks like a secret; set sensitive = true`, file, line: b.line });
+              ctx.report.violation({
+                message: `variable "${name}" looks like a secret; set sensitive = true`,
+                file,
+                line: b.line,
+                fix: `Add sensitive = true to variable "${name}"`,
+              });
             }
             if (/^\s*default\s*=/m.test(b.body)) {
-              ctx.report.violation({ message: `variable "${name}" looks like a secret; remove its default`, file, line: b.line });
+              ctx.report.violation({
+                message: `variable "${name}" looks like a secret; remove its default`,
+                file,
+                line: b.line,
+                fix: `Remove the default and pass the value from the pipeline (TF_VAR_${name})`,
+              });
             }
           }
         }

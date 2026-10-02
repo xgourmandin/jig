@@ -1,1 +1,5 @@
-{ "compilerOptions": { "paths": { "@/*": ["./src/*"], "@icons/*": ["./vendor/icons/*"] } } }
+{
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"], "@icons/*": ["./vendor/icons/*"] }
+  }
+}

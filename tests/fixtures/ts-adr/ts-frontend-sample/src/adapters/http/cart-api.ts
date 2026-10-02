@@ -9,6 +9,9 @@ export class HttpCartRepository implements CartRepository {
     return new Cart(res.data.items);
   }
   async save(cart: Cart): Promise<void> {
-    await fetch(`${this.baseUrl}/cart`, { method: "PUT", body: JSON.stringify(cart.items) });
+    await fetch(`${this.baseUrl}/cart`, {
+      method: "PUT",
+      body: JSON.stringify(cart.items),
+    });
   }
 }

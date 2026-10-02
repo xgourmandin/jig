@@ -9,13 +9,14 @@ Company-wide defaults, based on the HashiCorp, Google Cloud and AWS best-practic
 
 ## Three levels of code
 
-| Level | What it is | Configures providers/backend? | Example |
-|---|---|---|---|
-| **Resource module** (child) | A small set of resources that together deliver one capability | No | `modules/network`: VPC, subnets, NAT, routes |
-| **Service/infrastructure module** | Composes resource modules for one system in one boundary (account/project, region) | No | `modules/payments-platform`: network + database + cluster |
-| **Root module (stack)** | What `init`/`plan` run in; one state file per stack per environment | Yes | `live/prod/eu-west-1/network` |
+| Level                             | What it is                                                                         | Configures providers/backend? | Example                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------- |
+| **Resource module** (child)       | A small set of resources that together deliver one capability                      | No                            | `modules/network`: VPC, subnets, NAT, routes              |
+| **Service/infrastructure module** | Composes resource modules for one system in one boundary (account/project, region) | No                            | `modules/payments-platform`: network + database + cluster |
+| **Root module (stack)**           | What `init`/`plan` run in; one state file per stack per environment                | Yes                           | `live/prod/eu-west-1/network`                             |
 
 Rules:
+
 - A module is a new abstraction. Don't wrap a single resource: if you can't name the module differently from the resource type inside it, use the resource directly.
 - Group by capability and change together (network foundation, data tier, IAM baseline, an application), not by resource type.
 - Keep the module tree flat: at most one or two levels of nesting. Prefer the root module composing sibling modules and wiring outputs into inputs over modules calling modules calling modules.
@@ -24,12 +25,14 @@ Rules:
 ## Splitting state (stacks)
 
 Everything in one state is planned, refreshed, locked and put at risk together. Split into several root modules when:
+
 - it grows beyond roughly 100 resources (Google suggests a few dozen), or plans get slow;
 - parts change at different rates (network and IAM rarely; applications often);
 - parts have different owners, blast radius or permissions (who can change prod networking vs. an app);
 - parts live in different accounts/projects or regions.
 
 Typical layering, each its own state, lower layers never read higher ones:
+
 1. **Bootstrap**: state backend, CI identities (applied rarely, by a platform admin).
 2. **Foundation**: accounts/projects, org policies, IAM baseline, DNS zones.
 3. **Network**: VPCs, subnets, peering/transit, shared endpoints.
@@ -49,6 +52,7 @@ Don't split so fine that a single change needs coordinated applies across many s
 ## Sharing data between stacks
 
 Prefer, in order:
+
 1. **Provider data sources** that look up the real object by name or tag (`data "aws_vpc"`, `data "google_compute_network"`). No coupling to another stack's state.
 2. **A published value** written by the producing stack to a parameter store/registry (`aws_ssm_parameter`, Consul, HCP `tfe_outputs`).
 3. **`terraform_remote_state`**, read-only and only for outputs meant as a contract. It needs read access to the whole other state (including its secrets), so use it sparingly and never across trust boundaries.

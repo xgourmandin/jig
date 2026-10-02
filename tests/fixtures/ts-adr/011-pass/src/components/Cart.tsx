@@ -7,5 +7,11 @@ import type { CartService } from "../ports/cart";
 const doc = "fetch('/x') and new WebSocket()";
 export function Cart({ svc }: { svc: CartService }) {
   const cart: CartModel | undefined = useCart(svc);
-  return <p>{String(cart)}{doc}<Icon /></p>;
+  return (
+    <p>
+      {String(cart)}
+      {doc}
+      <Icon />
+    </p>
+  );
 }

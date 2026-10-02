@@ -2,15 +2,16 @@
 
 Enable in repos that contain TypeScript or JavaScript.
 
-| Component | File | What it does |
-|---|---|---|
-| LSP | dependency `typescript-lsp@claude-plugins-official` | Official plugin, installed automatically: `typescript-language-server` definitions, references, diagnostics after each edit |
-| Edit checks (PostToolUse) | `hooks/scripts/ts-post-edit.sh` | On every edited `.ts .tsx .mts .cts .js .jsx .mjs .cjs` file, the tool the repo configures: `biome check --write` (biome.json), or `prettier --write` + `eslint --fix` (eslint config); remaining errors fed back to Claude; records the file for Stop |
-| Checks (Stop) | `hooks/scripts/ts-stop-check.sh` | `tsc --noEmit` for each TypeScript project edited this session (nearest `tsconfig.json`, errors only), then each package's tests (`vitest run`, else `<pm> test`); blocks once on failures (the re-check after Claude's fix only reports, never blocks twice) |
-| Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing, and when `node_modules` or the project's tsserver is missing |
-| Skill | `skills/typescript-conventions` | Jig conventions, loaded automatically for TS/JS files |
+| Component                 | File                                                | What it does                                                                                                                                                                                                                                                  |
+| ------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LSP                       | dependency `typescript-lsp@claude-plugins-official` | Official plugin, installed automatically: `typescript-language-server` definitions, references, diagnostics after each edit                                                                                                                                   |
+| Edit checks (PostToolUse) | `hooks/scripts/ts-post-edit.sh`                     | On every edited `.ts .tsx .mts .cts .js .jsx .mjs .cjs` file, the tool the repo configures: `biome check --write` (biome.json), or `prettier --write` + `eslint --fix` (eslint config); remaining errors fed back to Claude; records the file for Stop        |
+| Checks (Stop)             | `hooks/scripts/ts-stop-check.sh`                    | `tsc --noEmit` for each TypeScript project edited this session (nearest `tsconfig.json`, errors only), then each package's tests (`vitest run`, else `<pm> test`); blocks once on failures (the re-check after Claude's fix only reports, never blocks twice) |
+| Tool check (SessionStart) | `hooks/scripts/check-tools.sh`                      | Tells Claude which binaries are missing, and when `node_modules` or the project's tsserver is missing                                                                                                                                                         |
+| Skill                     | `skills/typescript-conventions`                     | Jig conventions, loaded automatically for TS/JS files                                                                                                                                                                                                         |
 
 **Formatter and linter, detected per repo** (nearest config wins, up to the git root):
+
 - `biome.json`/`biome.jsonc` → `biome check --write` (format + safe fixes). Errors block, warnings don't (as in CI). biome's `files.includes` and VCS ignore settings apply.
 - else an eslint config (`eslint.config.*`, `.eslintrc*`, `eslintConfig` in package.json) → `prettier --write` if the repo uses prettier (a prettier config, or prettier in package.json), then `eslint --fix`. Errors block. If eslint itself fails (broken config, missing plugin), the user gets a message and the edit is not blocked.
 - else prettier only if the repo uses it; otherwise nothing. We never impose prettier's style on a repo that does not use it.

@@ -2,7 +2,7 @@
 # Starts OpenWiki's host-driven MCP server (stdio): OpenWiki keeps the page
 # queue, Claims and finalization; Claude Code does the research and writing
 # with the developer's own session, so no provider key is needed.
-# Never `openwiki integrations install` (writes ~/.claude.json and user skills).
+# `jig-init --openwiki` runs `openwiki integrations install claude` per developer.
 # The package is pinned by the consuming repo's mise.toml (npm backend).
 set -euo pipefail
 if ! command -v openwiki >/dev/null; then

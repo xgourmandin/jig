@@ -2,13 +2,13 @@
 
 Enable in repos that contain Go.
 
-| Component | File | What it does |
-|---|---|---|
-| LSP | dependency `gopls-lsp@claude-plugins-official` | Official plugin, installed automatically: gopls definitions, references, compile and vet diagnostics after each edit |
-| Edit checks (PostToolUse) | `hooks/scripts/go-post-edit.sh` | `goimports -w` (fallback `gofmt -w`) on every edited `.go` file; syntax errors fed back to Claude; records the file for Stop |
-| Checks (Stop) | `hooks/scripts/go-stop-check.sh` | For each module edited this session: `golangci-lint run` (repo `.golangci.yml`; `go vet` if golangci-lint is missing), then `go test`, both on the edited packages only; blocks once on failures (the re-check after Claude's fix only reports, never blocks twice) |
-| Tool check (SessionStart) | `hooks/scripts/check-tools.sh` | Tells Claude which binaries are missing |
-| Skill | `skills/go-conventions` | Jig conventions, loaded automatically for Go files |
+| Component                 | File                                           | What it does                                                                                                                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LSP                       | dependency `gopls-lsp@claude-plugins-official` | Official plugin, installed automatically: gopls definitions, references, compile and vet diagnostics after each edit                                                                                                                                                |
+| Edit checks (PostToolUse) | `hooks/scripts/go-post-edit.sh`                | `goimports -w` (fallback `gofmt -w`) on every edited `.go` file; syntax errors fed back to Claude; records the file for Stop                                                                                                                                        |
+| Checks (Stop)             | `hooks/scripts/go-stop-check.sh`               | For each module edited this session: `golangci-lint run` (repo `.golangci.yml`; `go vet` if golangci-lint is missing), then `go test`, both on the edited packages only; blocks once on failures (the re-check after Claude's fix only reports, never blocks twice) |
+| Tool check (SessionStart) | `hooks/scripts/check-tools.sh`                 | Tells Claude which binaries are missing                                                                                                                                                                                                                             |
+| Skill                     | `skills/go-conventions`                        | Jig conventions, loaded automatically for Go files                                                                                                                                                                                                                  |
 
 **Why no linter on edit.** golangci-lint loads and type-checks whole packages, which takes seconds per edit in a real repo. gopls already reports compile errors and most `go vet` checks after each edit, so the full lint waits for Stop.
 

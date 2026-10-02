@@ -195,6 +195,7 @@ Preconditions/postconditions fail the plan or apply; `check` blocks only warn.
 ## Secrets
 
 Order of preference:
+
 1. Don't let Terraform see the secret: have the service generate and store it (e.g. `manage_master_user_password = true` on RDS), and grant access to it.
 2. Ephemeral values (Terraform / OpenTofu >= 1.11): read with an `ephemeral` resource (e.g. `ephemeral "aws_secretsmanager_secret_version"`) or an `ephemeral` variable, and pass it to a write-only argument (`password_wo` + `password_wo_version`). Nothing lands in state or plan.
 3. A data source or variable marked `sensitive`: hidden in CLI output, but stored in plaintext in state. Only acceptable because state is encrypted and access-controlled (OpenTofu can also encrypt state client-side).

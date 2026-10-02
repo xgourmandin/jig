@@ -3,8 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@app/*": ["src/application/*"], /* the app */
-      "@kit": ["src/adapters/kit/index.ts"],
-    },
-  },
+      "@app/*": ["src/application/*"] /* the app */,
+      "@kit": ["src/adapters/kit/index.ts"]
+    }
+  }
 }

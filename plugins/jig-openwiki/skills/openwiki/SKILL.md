@@ -6,6 +6,7 @@ description: Initialize or update this repository's OpenWiki (the generated wiki
 # OpenWiki (Jig)
 
 Jig runs OpenWiki locally, driven by you. Before starting:
+
 - Work on a branch (the start-work skill), never the default branch. The result
   is reviewed in a PR like any other docs change.
 - If the `openwiki_*` tools are missing, tell the developer to run `mise install`

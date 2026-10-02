@@ -19,5 +19,7 @@ const add = (): void => {
 </script>
 
 <style scoped>
-section { color: red; }
+section {
+  color: red;
+}
 </style>

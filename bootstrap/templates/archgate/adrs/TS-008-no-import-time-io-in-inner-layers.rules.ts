@@ -6,38 +6,149 @@
 // directories src/{components,pages,routes,views,features,hooks,composables,stores,ui}/ (layer "ui").
 // Any other file under src/ has the layer "other"; files outside src/ are not layer-checked.
 // Scanned: ts tsx mts cts js jsx mjs cjs, plus the <script> blocks of .vue .svelte .astro files.
-type JigCfg = { dir: string[]; base: string[] | null; paths: [string, string[]][] };
+type JigCfg = {
+  dir: string[];
+  base: string[] | null;
+  paths: [string, string[]][];
+};
 type JigLoc = { layer: string; unit: string; dir: string[]; cfg?: JigCfg };
 type JigImport = { line: number; spec: string };
 
-const JIG_LAYERS = ["domain", "application", "ports", "adapters", "bootstrap", "main"];
-const JIG_UI_DIRS = ["components", "pages", "routes", "views", "features", "hooks", "composables", "stores", "ui"];
+const JIG_LAYERS = [
+  "domain",
+  "application",
+  "ports",
+  "adapters",
+  "bootstrap",
+  "main",
+];
+const JIG_UI_DIRS = [
+  "components",
+  "pages",
+  "routes",
+  "views",
+  "features",
+  "hooks",
+  "composables",
+  "stores",
+  "ui",
+];
 const JIG_EXT = /\.(?:[cm]?[jt]sx?|vue|svelte|astro)$/;
-const jigLayerOf = (seg: string) => (JIG_LAYERS.includes(seg) ? seg : JIG_UI_DIRS.includes(seg) ? "ui" : "other");
+const jigLayerOf = (seg: string) =>
+  JIG_LAYERS.includes(seg) ? seg : JIG_UI_DIRS.includes(seg) ? "ui" : "other";
 // Node built-ins that do I/O; inner layers must not import them (with or without `node:`).
 const JIG_NODE_IO = [
-  "fs", "http", "https", "http2", "net", "dgram", "dns", "tls", "child_process", "cluster", "worker_threads", "readline",
+  "fs",
+  "http",
+  "https",
+  "http2",
+  "net",
+  "dgram",
+  "dns",
+  "tls",
+  "child_process",
+  "cluster",
+  "worker_threads",
+  "readline",
 ];
 // I/O clients: libraries that talk to a network, database or cloud service. Forbidden in inner layers and in ui.
 const JIG_IO_CLIENTS = [
-  "prisma", "@prisma/client", "typeorm", "sequelize", "mongoose", "mongodb", "knex", "drizzle-orm", "pg", "mysql",
-  "mysql2", "sqlite3", "better-sqlite3", "redis", "ioredis", "axios", "node-fetch", "got", "ky", "ofetch", "undici",
-  "superagent", "aws-sdk", "aws-amplify", "@aws-amplify", "@aws-sdk", "@smithy", "@google-cloud", "@azure",
-  "firebase", "@firebase", "firebase-admin", "@supabase", "@apollo/client", "urql", "@urql", "graphql-request",
-  "@trpc/client", "kafkajs", "amqplib", "bullmq", "bull", "@grpc/grpc-js", "nodemailer", "socket.io",
-  "socket.io-client", "ws",
+  "prisma",
+  "@prisma/client",
+  "typeorm",
+  "sequelize",
+  "mongoose",
+  "mongodb",
+  "knex",
+  "drizzle-orm",
+  "pg",
+  "mysql",
+  "mysql2",
+  "sqlite3",
+  "better-sqlite3",
+  "redis",
+  "ioredis",
+  "axios",
+  "node-fetch",
+  "got",
+  "ky",
+  "ofetch",
+  "undici",
+  "superagent",
+  "aws-sdk",
+  "aws-amplify",
+  "@aws-amplify",
+  "@aws-sdk",
+  "@smithy",
+  "@google-cloud",
+  "@azure",
+  "firebase",
+  "@firebase",
+  "firebase-admin",
+  "@supabase",
+  "@apollo/client",
+  "urql",
+  "@urql",
+  "graphql-request",
+  "@trpc/client",
+  "kafkajs",
+  "amqplib",
+  "bullmq",
+  "bull",
+  "@grpc/grpc-js",
+  "nodemailer",
+  "socket.io",
+  "socket.io-client",
+  "ws",
 ];
 // Server frameworks and tooling that inner layers must not import. next/nuxt are listed here and in the UI list:
 // they are only checked in inner layers (the server/client split of a Next/Nuxt app is not modelled).
 const JIG_SERVER_FW = [
-  "express", "fastify", "koa", "hono", "@hapi/hapi", "@nestjs", "next", "nuxt", "@nuxt", "#app", "#imports", "dotenv",
+  "express",
+  "fastify",
+  "koa",
+  "hono",
+  "@hapi/hapi",
+  "@nestjs",
+  "next",
+  "nuxt",
+  "@nuxt",
+  "#app",
+  "#imports",
+  "dotenv",
 ];
 // UI frameworks, routers and state/data libraries that inner layers must not import. rxjs is deliberately not
 // listed: it is a pure library that application code may use.
 const JIG_UI_FW = [
-  "react", "react-dom", "react-native", "preact", "vue", "@vue", "@vueuse", "svelte", "@sveltejs", "@angular", "solid-js",
-  "react-router", "react-router-dom", "@remix-run", "vue-router", "@tanstack", "redux", "@reduxjs", "react-redux",
-  "zustand", "pinia", "mobx", "mobx-react", "mobx-react-lite", "jotai", "recoil", "swr", "valtio", "nanostores",
+  "react",
+  "react-dom",
+  "react-native",
+  "preact",
+  "vue",
+  "@vue",
+  "@vueuse",
+  "svelte",
+  "@sveltejs",
+  "@angular",
+  "solid-js",
+  "react-router",
+  "react-router-dom",
+  "@remix-run",
+  "vue-router",
+  "@tanstack",
+  "redux",
+  "@reduxjs",
+  "react-redux",
+  "zustand",
+  "pinia",
+  "mobx",
+  "mobx-react",
+  "mobx-react-lite",
+  "jotai",
+  "recoil",
+  "swr",
+  "valtio",
+  "nanostores",
 ];
 const JIG_INFRA = [...JIG_IO_CLIENTS, ...JIG_SERVER_FW, ...JIG_UI_FW];
 
@@ -52,7 +163,8 @@ function jigMask(src: string, comments = false): string {
   const skipStr = (i: number): number => {
     const q = src[i];
     let j = i + 1;
-    while (j < n && src[j] !== q && src[j] !== "\n") j += src[j] === "\\" ? 2 : 1;
+    while (j < n && src[j] !== q && src[j] !== "\n")
+      j += src[j] === "\\" ? 2 : 1;
     j = Math.min(j, n);
     blank(i + 1, j);
     return src[j] === q ? j + 1 : j;
@@ -63,14 +175,31 @@ function jigMask(src: string, comments = false): string {
     if (j < 0) return true;
     if ("(,=:[!&|?{;+-*%<>~^".includes(src[j])) return true;
     const w = /([A-Za-z]+)$/.exec(src.slice(Math.max(0, j - 8), j + 1));
-    return !!w && ["return", "typeof", "case", "in", "of", "delete", "void", "throw", "yield", "await"].includes(w[1]);
+    return (
+      !!w &&
+      [
+        "return",
+        "typeof",
+        "case",
+        "in",
+        "of",
+        "delete",
+        "void",
+        "throw",
+        "yield",
+        "await",
+      ].includes(w[1])
+    );
   };
   const skipRegex = (i: number): number => {
     let j = i + 1;
     let cls = false;
     while (j < n && src[j] !== "\n") {
       const c = src[j];
-      if (c === "\\") { j += 2; continue; }
+      if (c === "\\") {
+        j += 2;
+        continue;
+      }
       if (c === "[") cls = true;
       else if (c === "]") cls = false;
       else if (c === "/" && !cls) break;
@@ -84,7 +213,11 @@ function jigMask(src: string, comments = false): string {
   const skipTpl = (i: number): number => {
     let j = i + 1;
     while (j < n && src[j] !== "`") {
-      if (src[j] === "\\") { blank(j, j + 2); j += 2; continue; }
+      if (src[j] === "\\") {
+        blank(j, j + 2);
+        j += 2;
+        continue;
+      }
       if (src[j] === "$" && src[j + 1] === "{") {
         blank(j, j + 2);
         j = scan(j + 2, true);
@@ -114,8 +247,10 @@ function jigMask(src: string, comments = false): string {
       } else if (c === '"' || c === "'") i = skipStr(i);
       else if (c === "`") i = skipTpl(i);
       else if (c === "/" && regexAllowed(i)) i = skipRegex(i);
-      else if (inTpl && c === "{") { depth++; i++; }
-      else if (inTpl && c === "}") {
+      else if (inTpl && c === "{") {
+        depth++;
+        i++;
+      } else if (inTpl && c === "}") {
         if (depth === 0) return i + 1;
         depth--;
         i++;
@@ -127,19 +262,28 @@ function jigMask(src: string, comments = false): string {
   return out.join("");
 }
 
-const jigLineOf = (raw: string, offset: number) => raw.slice(0, offset).split("\n").length;
-const jigIsTest = (f: string) => /\.(test|spec)\.(?:[cm]?[jt]sx?|vue|svelte|astro)$/.test(f) || /(^|\/)__tests__\//.test(f);
+const jigLineOf = (raw: string, offset: number) =>
+  raw.slice(0, offset).split("\n").length;
+const jigIsTest = (f: string) =>
+  /\.(test|spec)\.(?:[cm]?[jt]sx?|vue|svelte|astro)$/.test(f) ||
+  /(^|\/)__tests__\//.test(f);
 
 // File contents as code. For .vue/.svelte/.astro only the <script> blocks (and the astro frontmatter) are kept; the
 // rest is blanked with newlines preserved, so line numbers stay valid. `ts` tells whether the code is TypeScript.
-async function jigRead(ctx: RuleContext, file: string): Promise<{ raw: string; ts: boolean }> {
+async function jigRead(
+  ctx: RuleContext,
+  file: string,
+): Promise<{ raw: string; ts: boolean }> {
   const text = await ctx.readFile(file);
-  if (!/\.(?:vue|svelte|astro)$/.test(file)) return { raw: text, ts: /\.[cm]?tsx?$/.test(file) };
+  if (!/\.(?:vue|svelte|astro)$/.test(file))
+    return { raw: text, ts: /\.[cm]?tsx?$/.test(file) };
   const astro = file.endsWith(".astro");
   let ts = astro;
   const keep: [number, number][] = [];
   if (astro) {
-    const fm = /^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(text);
+    const fm = /^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/.exec(
+      text,
+    );
     if (fm) {
       const start = fm.index + fm[0].indexOf("\n") + 1;
       keep.push([start, start + fm[1].length]);
@@ -161,12 +305,17 @@ async function jigRead(ctx: RuleContext, file: string): Promise<{ raw: string; t
 }
 // Code files (not tests, declarations or vendored output) whose path passes `keep`, read in parallel. Filtering by
 // path first means files of unrelated layers are never read.
-async function jigSources(ctx: RuleContext, keep: (file: string) => boolean = () => true) {
+async function jigSources(
+  ctx: RuleContext,
+  keep: (file: string) => boolean = () => true,
+) {
   const files = ctx.scopedFiles
     .filter(
       (f) =>
         JIG_EXT.test(f) &&
-        !/(^|\/)(node_modules|dist|build|out|coverage|\.next|\.nuxt|\.turbo|\.archgate)\//.test(f) &&
+        !/(^|\/)(node_modules|dist|build|out|coverage|\.next|\.nuxt|\.turbo|\.archgate)\//.test(
+          f,
+        ) &&
         !/\.d\.[cm]?ts$/.test(f) &&
         !jigIsTest(f) &&
         keep(f),
@@ -179,7 +328,7 @@ async function jigSources(ctx: RuleContext, keep: (file: string) => boolean = ()
 // Strip // and /* */ comments and trailing commas from tsconfig-style JSON, then parse (null when invalid).
 function jigJson(text: string): any {
   let out = "";
-  for (let i = 0; i < text.length; ) {
+  for (let i = 0; i < text.length;) {
     const c = text[i];
     if (c === '"') {
       let j = i + 1;
@@ -197,7 +346,7 @@ function jigJson(text: string): any {
     }
   }
   let res = "";
-  for (let i = 0; i < out.length; ) {
+  for (let i = 0; i < out.length;) {
     if (out[i] === '"') {
       let j = i + 1;
       while (j < out.length && out[j] !== '"') j += out[j] === "\\" ? 2 : 1;
@@ -206,7 +355,11 @@ function jigJson(text: string): any {
     } else if (out[i] === "," && /^\s*[}\]]/.test(out.slice(i + 1))) i++;
     else res += out[i++];
   }
-  try { return JSON.parse(res); } catch { return null; }
+  try {
+    return JSON.parse(res);
+  } catch {
+    return null;
+  }
 }
 
 const jigDirOf = (f: string) => f.split("/").slice(0, -1);
@@ -222,24 +375,51 @@ function jigJoin(base: string[], rel: string): string[] {
 
 // compilerOptions.paths/baseUrl of every tsconfig.json (and tsconfig.app.json); `extends` is not followed.
 // Returns the config of the nearest directory above `file` that defines paths or baseUrl.
-async function jigConfigs(ctx: RuleContext): Promise<(file: string) => JigCfg | undefined> {
+async function jigConfigs(
+  ctx: RuleContext,
+): Promise<(file: string) => JigCfg | undefined> {
   const byDir = new Map<string, JigCfg>();
-  const files = (await Promise.all([ctx.glob("**/tsconfig.json"), ctx.glob("**/tsconfig.app.json")]))
-    .flat().filter((f) => !/(^|\/)node_modules\//.test(f)).sort();
-  const texts = await Promise.all(files.map((f) => ctx.readFile(f).catch(() => null)));
+  const files = (
+    await Promise.all([
+      ctx.glob("**/tsconfig.json"),
+      ctx.glob("**/tsconfig.app.json"),
+    ])
+  )
+    .flat()
+    .filter((f) => !/(^|\/)node_modules\//.test(f))
+    .sort();
+  const texts = await Promise.all(
+    files.map((f) => ctx.readFile(f).catch(() => null)),
+  );
   for (const [n, f] of files.entries()) {
     let json: any;
-    try { json = jigJson(texts[n]!); } catch { continue; }
+    try {
+      json = jigJson(texts[n]!);
+    } catch {
+      continue;
+    }
     const co = json?.compilerOptions;
     if (!co || (!co.paths && typeof co.baseUrl !== "string")) continue;
     const dir = jigDirOf(f);
-    const base = typeof co.baseUrl === "string" ? jigJoin(dir, co.baseUrl) : null;
+    const base =
+      typeof co.baseUrl === "string" ? jigJoin(dir, co.baseUrl) : null;
     const paths: [string, string[]][] = Object.entries<unknown>(co.paths ?? {})
       .filter(([, v]) => Array.isArray(v))
-      .map(([k, v]) => [k, (v as unknown[]).filter((x): x is string => typeof x === "string")] as [string, string[]]);
+      .map(
+        ([k, v]) =>
+          [
+            k,
+            (v as unknown[]).filter((x): x is string => typeof x === "string"),
+          ] as [string, string[]],
+      );
     paths.sort((x, y) => y[0].length - x[0].length);
     const old = byDir.get(dir.join("/"));
-    byDir.set(dir.join("/"), old ? { dir, base: old.base ?? base, paths: [...old.paths, ...paths] } : { dir, base, paths });
+    byDir.set(
+      dir.join("/"),
+      old
+        ? { dir, base: old.base ?? base, paths: [...old.paths, ...paths] }
+        : { dir, base, paths },
+    );
   }
   return (file) => {
     const d = jigDirOf(file);
@@ -257,7 +437,11 @@ function jigLoc(file: string): JigLoc | null {
   const segs = m[1].split("/");
   segs[segs.length - 1] = segs[segs.length - 1].replace(JIG_EXT, "");
   const layer = jigLayerOf(segs[0]);
-  return { layer, unit: segs.length >= 3 ? segs[1] : "", dir: segs.slice(0, -1) };
+  return {
+    layer,
+    unit: segs.length >= 3 ? segs[1] : "",
+    dir: segs.slice(0, -1),
+  };
 }
 
 // import / import type / export ... from / require() / dynamic import(); specifiers are read from `raw`
@@ -265,9 +449,15 @@ function jigLoc(file: string): JigLoc | null {
 function jigImports(raw: string, masked: string): JigImport[] {
   const ws = "[ \\t\\r\\n]*";
   const pats = [
-    new RegExp(`\\bimport${ws}(?:type[ \\t\\r\\n]+)?(?:[\\w$]+${ws},?${ws})?(?:\\*${ws}as[ \\t\\r\\n]+[\\w$]+|\\{[^}]*\\})?${ws}from${ws}(['"])`, "g"),
+    new RegExp(
+      `\\bimport${ws}(?:type[ \\t\\r\\n]+)?(?:[\\w$]+${ws},?${ws})?(?:\\*${ws}as[ \\t\\r\\n]+[\\w$]+|\\{[^}]*\\})?${ws}from${ws}(['"])`,
+      "g",
+    ),
     new RegExp(`\\bimport${ws}(['"])`, "g"),
-    new RegExp(`\\bexport${ws}(?:type[ \\t\\r\\n]+)?(?:\\*(?:${ws}as[ \\t\\r\\n]+[\\w$]+)?|\\{[^}]*\\})${ws}from${ws}(['"])`, "g"),
+    new RegExp(
+      `\\bexport${ws}(?:type[ \\t\\r\\n]+)?(?:\\*(?:${ws}as[ \\t\\r\\n]+[\\w$]+)?|\\{[^}]*\\})${ws}from${ws}(['"])`,
+      "g",
+    ),
     new RegExp(`(?<![\\w$.])(?:import|require)${ws}\\(${ws}(['"])`, "g"),
   ];
   const out: JigImport[] = [];
@@ -276,7 +466,10 @@ function jigImports(raw: string, masked: string): JigImport[] {
       const open = (m.index ?? 0) + m[0].length - 1;
       const close = masked.indexOf(m[1], open + 1);
       if (close < 0) continue;
-      out.push({ line: jigLineOf(raw, m.index ?? 0), spec: raw.slice(open + 1, close) });
+      out.push({
+        line: jigLineOf(raw, m.index ?? 0),
+        spec: raw.slice(open + 1, close),
+      });
     }
   }
   return out.sort((a, b) => a.line - b.line);
@@ -291,7 +484,10 @@ function jigBelowSrc(parts: string[]): string[] | null {
 // Internal target of a specifier: relative paths, the nearest tsconfig's `paths` (and `baseUrl` for bare layer
 // names) and, when those do not match, the aliases `@/`, `~/`, `#/`, `src/` (all mapped to the src root).
 // `extends` chains are not followed. Returns null for packages and for paths leaving src.
-function jigTarget(spec: string, loc: JigLoc): { layer: string; unit: string } | null {
+function jigTarget(
+  spec: string,
+  loc: JigLoc,
+): { layer: string; unit: string } | null {
   let parts: string[] | null = null;
   const alias = /^(?:[@~#]\/|src\/)(.*)$/.exec(spec);
   if (spec.startsWith(".")) {
@@ -310,13 +506,19 @@ function jigTarget(spec: string, loc: JigLoc): { layer: string; unit: string } |
       const star = pat.indexOf("*");
       let rest: string | null = null;
       if (star < 0) rest = spec === pat ? "" : null;
-      else if (spec.length >= pat.length - 1 && spec.startsWith(pat.slice(0, star)) && spec.endsWith(pat.slice(star + 1))) {
+      else if (
+        spec.length >= pat.length - 1 &&
+        spec.startsWith(pat.slice(0, star)) &&
+        spec.endsWith(pat.slice(star + 1))
+      ) {
         rest = spec.slice(star, spec.length - (pat.length - star - 1));
       }
       if (rest === null) continue;
       matched = true;
       for (const tg of targets) {
-        parts = jigBelowSrc(jigJoin(cfg?.base ?? cfg?.dir ?? [], tg.replace("*", rest)));
+        parts = jigBelowSrc(
+          jigJoin(cfg?.base ?? cfg?.dir ?? [], tg.replace("*", rest)),
+        );
         if (parts) break;
       }
       break;
@@ -325,7 +527,8 @@ function jigTarget(spec: string, loc: JigLoc): { layer: string; unit: string } |
       const p = jigBelowSrc(jigJoin(cfg.base, spec));
       if (p && p[0] && jigLayerOf(p[0]) !== "other") parts = p;
     }
-    if (!matched && !parts && alias) parts = alias[1].split("/").filter(Boolean);
+    if (!matched && !parts && alias)
+      parts = alias[1].split("/").filter(Boolean);
   }
   if (!parts || !parts.length) return null;
   parts[parts.length - 1] = parts[parts.length - 1].replace(JIG_EXT, "");
@@ -367,7 +570,9 @@ const JIG_BROWSER_MEMBERS: Record<string, string> = {
 function jigBrowserGlobals(masked: string): { offset: number; name: string }[] {
   const out: { offset: number; name: string }[] = [];
   const shadowed = (n: string) =>
-    new RegExp(`\\b(?:const|let|var|function|class|type|interface|enum)[ \\t]+${n}\\b|[(,{][ \\t\\r\\n]*${n}[ \\t]*\\??:`).test(masked);
+    new RegExp(
+      `\\b(?:const|let|var|function|class|type|interface|enum)[ \\t]+${n}\\b|[(,{][ \\t\\r\\n]*${n}[ \\t]*\\??:`,
+    ).test(masked);
   for (const [name, members] of Object.entries(JIG_BROWSER_MEMBERS)) {
     if (shadowed(name)) continue;
     const idx = name === "window" || name === "document" ? "|\\[" : "";
@@ -375,14 +580,20 @@ function jigBrowserGlobals(masked: string): { offset: number; name: string }[] {
       `(?<![\\w$.#])${name}[ \\t]*(?:\\?\\.[ \\t]*(?=${members})|\\.[ \\t]*(?=${members})${idx})|\\btypeof[ \\t]+${name}\\b`,
       "g",
     );
-    for (const m of masked.matchAll(re)) out.push({ offset: m.index ?? 0, name });
+    for (const m of masked.matchAll(re))
+      out.push({ offset: m.index ?? 0, name });
   }
-  const store = /(?<![\w$.#])(?:globalThis\.)?(localStorage|sessionStorage)\b|\bglobalThis\.(?:document|navigator|location)\b/g;
+  const store =
+    /(?<![\w$.#])(?:globalThis\.)?(localStorage|sessionStorage)\b|\bglobalThis\.(?:document|navigator|location)\b/g;
   for (const m of masked.matchAll(store)) {
     const before = masked.slice(0, m.index ?? 0);
     const after = masked.slice((m.index ?? 0) + m[0].length);
     const lineStart = before.slice(before.lastIndexOf("\n") + 1).trim();
-    if (/^[ \t]*\??:/.test(after) && (lineStart === "" || /[({,;]$/.test(lineStart))) continue;
+    if (
+      /^[ \t]*\??:/.test(after) &&
+      (lineStart === "" || /[({,;]$/.test(lineStart))
+    )
+      continue;
     out.push({ offset: m.index ?? 0, name: m[1] ?? m[0] });
   }
   return out.sort((a, b) => a.offset - b.offset);
@@ -421,9 +632,12 @@ async function jigCheckImports(
 }
 // </jig-ts-helpers>
 
-const ASSIGN = "(?:(?:export[ \\t]+)?(?:const|let|var)[ \\t]+[^=\\n]+=[ \\t]*)?";
+const ASSIGN =
+  "(?:(?:export[ \\t]+)?(?:const|let|var)[ \\t]+[^=\\n]+=[ \\t]*)?";
 const IO_CALL = new RegExp(
-  "^" + ASSIGN + "(?:await[ \\t]+)?" +
+  "^" +
+    ASSIGN +
+    "(?:await[ \\t]+)?" +
     "(?:fetch|console\\.\\w+|fs\\.\\w+|axios\\.\\w+|readFileSync|writeFileSync|readFile|writeFile|spawn|spawnSync|exec|execSync|" +
     "execFileSync|setInterval|setTimeout|process\\.exit|process\\.std(?:out|err)\\.write|dotenv\\.config|" +
     "new[ \\t]+(?:PrismaClient|Pool|Client|Redis|WebSocket|XMLHttpRequest|Worker))[ \\t]*\\(",
@@ -434,18 +648,29 @@ const TOP_AWAIT = new RegExp("^" + ASSIGN + "await\\b", "gm");
 export default {
   rules: {
     "no-import-time-io": {
-      description: "Domain, application and ports modules do no I/O or top-level await at import time",
+      description:
+        "Domain, application and ports modules do no I/O or top-level await at import time",
       async check(ctx) {
         const inner = ["domain", "application", "ports"];
-        for (const { file, raw } of await jigSources(ctx, (f) => inner.includes(jigLoc(f)?.layer ?? ""))) {
+        for (const { file, raw } of await jigSources(ctx, (f) =>
+          inner.includes(jigLoc(f)?.layer ?? ""),
+        )) {
           const loc = jigLoc(file)!;
           const masked = jigMask(raw);
           const seen = new Set<number>();
-          for (const m of [...masked.matchAll(IO_CALL), ...masked.matchAll(TOP_AWAIT)]) {
+          for (const m of [
+            ...masked.matchAll(IO_CALL),
+            ...masked.matchAll(TOP_AWAIT),
+          ]) {
             const line = jigLineOf(raw, m.index ?? 0);
             if (seen.has(line)) continue;
             seen.add(line);
-            jigReport(ctx, file, line, `Module-level I/O in ${loc.layer}; do it inside a function called from bootstrap`);
+            jigReport(
+              ctx,
+              file,
+              line,
+              `Module-level I/O in ${loc.layer}; do it inside a function called from bootstrap`,
+            );
           }
         }
       },

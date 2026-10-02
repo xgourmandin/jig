@@ -14,10 +14,11 @@ Use the cheapest tool that answers the question, in this order. Move down only w
    - Read one symbol: `get_code_snippet` instead of reading the whole file.
    - If the session context says there is no graph, run `index_repository` (mode `fast`) once first.
 2. **LSP** (the LSP tool, when a language server is enabled): exact go-to-definition, find-references, hover types, diagnostics for a symbol you already have a position for. More precise than the graph inside one language.
-3. **ast-grep** (`ast-grep run -p '<pattern>' -l <lang> <path>`): structural search when you need a code *shape* (every call to `foo($A)` with two args, every resource with a given block). Also for mechanical codemods (`--rewrite`).
+3. **ast-grep** (`ast-grep run -p '<pattern>' -l <lang> <path>`): structural search when you need a code _shape_ (every call to `foo($A)` with two args, every resource with a given block). Also for mechanical codemods (`--rewrite`).
 4. **grep / Grep tool**: plain text only (log messages, config keys, comments, strings), scoped to a directory or glob. Never as the first step for "where is this defined/used".
 
 Rules:
+
 - Don't read whole large files to find one function; get the snippet or use the LSP.
 - When a tool is unavailable (MCP server failed, no LSP for this language), say so once and move to the next step.
 - Share what you learned about repo structure in `docs/ai/ARCHITECTURE.md` only when the user asks; the graph already covers "where things are".

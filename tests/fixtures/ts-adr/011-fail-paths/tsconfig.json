@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
     // trailing comma below on purpose
-    "paths": { "@api/*": ["./src/adapters/http/*"], },
-  },
+    "paths": { "@api/*": ["./src/adapters/http/*"] }
+  }
 }

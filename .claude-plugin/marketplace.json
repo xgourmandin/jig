@@ -41,7 +41,7 @@
     {
       "name": "jig-typescript",
       "source": "./plugins/jig-typescript",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "description": "TypeScript stack: code intelligence (typescript-lsp), biome or prettier + eslint on edit (detected per repo), tsc + vitest/npm test on Stop, conventions skill."
     }
   ]

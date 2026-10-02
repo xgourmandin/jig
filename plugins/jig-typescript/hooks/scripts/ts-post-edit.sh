@@ -32,7 +32,7 @@ if [[ "$linter" == biome ]]; then
   if biome="$(jig_ts_tool "$root" biome)"; then
     if ! out="$("$biome" check --write --no-errors-on-unmatched --files-ignore-unknown=true \
                   --colors=off --reporter=concise --diagnostic-level=error "$file" 2>&1)"; then
-      found="$(grep -E '^. +at ' <<<"$out" | head -30)"
+      found="$(grep -E '^[^[:space:]]+ [^[:space:]]+: ' <<<"$out" | head -30)"
       if [[ -n "$found" ]]; then problems+=$'biome check reported errors:\n'"$found"$'\n'
       else notes+="biome could not check $file: $(head -5 <<<"$out") "; fi
     fi

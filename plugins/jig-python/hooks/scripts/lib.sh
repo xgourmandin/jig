@@ -20,10 +20,16 @@ jig_py_root() {
 
 # Command for a tool in a project: the project's .venv first (its pinned
 # version), else PATH (mise). Prints nothing and returns 1 when neither exists.
+# A mise shim with no version set for the project is not an installed tool: it
+# only prints "No version is set for shim" when run.
 jig_py_tool() {
-  local root="$1" name="$2"
+  local root="$1" name="$2" bin
   if [[ -x "$root/.venv/bin/$name" ]]; then printf '%s\n' "$root/.venv/bin/$name"; return 0; fi
-  command -v "$name" 2>/dev/null
+  bin="$(command -v "$name" 2>/dev/null)" || return 1
+  if [[ "$bin" == */mise/shims/* ]] && ! (cd "$root" && mise which "$name" >/dev/null 2>&1); then
+    return 1
+  fi
+  printf '%s\n' "$bin"
 }
 
 # pytest command for a project, one word per line: `uv run --frozen pytest`

@@ -23,6 +23,8 @@ errors="" warnings=""
 declare -A files_by_root=()
 while IFS= read -r f; do
   [[ -f "$f" ]] || continue
+  # Git-ignored files (scratch scripts, generated code) are not the project's.
+  git -C "$(dirname -- "$f")" check-ignore -q -- "$f" 2>/dev/null && continue
   root="$(jig_py_root "$f")"
   files_by_root["$root"]+="$f"$'\n'
 done < <(sort -u "$state")

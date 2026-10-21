@@ -51,6 +51,21 @@ stub_bin() {
   run bash -c "source '$SCRIPTS/lib.sh'; jig_py_tool '$REPO' ruff"
   [ "$output" = "$REPO/.venv/bin/ruff" ]
 }
+@test "tool: a mise shim with no version set is not a tool" {
+  SHIMS="$BATS_TEST_TMPDIR/mise/shims"; mkdir -p "$SHIMS"
+  printf '#!/bin/sh\nexit 1\n' >"$SHIMS/pytest"; chmod +x "$SHIMS/pytest"
+  stub_bin; printf '#!/bin/sh\nexit 1\n' >"$STUBS/mise"; chmod +x "$STUBS/mise"
+  run env PATH="$SHIMS:$STUBS" bash -c "source '$SCRIPTS/lib.sh'; jig_py_tool '$REPO' pytest"
+  [ "$status" -ne 0 ]
+  [ -z "$output" ]
+}
+@test "tool: a mise shim with a version set is a tool" {
+  SHIMS="$BATS_TEST_TMPDIR/mise/shims"; mkdir -p "$SHIMS"
+  printf '#!/bin/sh\nexit 0\n' >"$SHIMS/pytest"; chmod +x "$SHIMS/pytest"
+  stub_bin mise
+  run env PATH="$SHIMS:$STUBS" bash -c "source '$SCRIPTS/lib.sh'; jig_py_tool '$REPO' pytest"
+  [ "$output" = "$SHIMS/pytest" ]
+}
 @test "pytest: uv run when the project has uv.lock and uv is installed" {
   stub_bin uv pytest; touch uv.lock
   run env PATH="$STUBS" bash -c "source '$SCRIPTS/lib.sh'; jig_py_pytest '$REPO'"
@@ -172,6 +187,16 @@ stub_bin() {
   stop
   [ ! -d .pytest_cache ] && [ ! -d .ruff_cache ]
   [ -z "$(find . -name __pycache__)" ]
+}
+@test "stop: git-ignored edited files are not checked" {
+  printf '.scratch/\n' >.gitignore; mkdir .scratch
+  printf 'x: int = 1\n' >.scratch/s.py
+  edit "$REPO/.scratch/s.py"
+  printf 'x: int = "a"\n' >.scratch/s.py
+  run stop
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+  [ ! -e "$STATE" ]
 }
 @test "stop: missing tools only warn" {
   stub_bin

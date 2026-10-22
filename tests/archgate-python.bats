@@ -8,6 +8,7 @@ FIXTURES="$BATS_TEST_DIRNAME/fixtures/py-adr"
 setup() {
   command -v archgate >/dev/null || skip "archgate not installed (run mise install)"
   export ARCHGATE_TELEMETRY=0
+  unset CI # archgate reports in its console format when CI is set, JSON otherwise (see archgate.bats)
   REPO="$BATS_TEST_TMPDIR/repo"
   mkdir -p "$REPO/.archgate"
   cp -r "$TEMPLATES/." "$REPO/.archgate/"

@@ -2,7 +2,7 @@
 
 Jig's shared Claude Code harness, distributed as a plugin marketplace. See `docs/DESIGN.md`.
 
-## Use in a repo (target state)
+## Use in a repo
 
 ```json
 // <repo>/.claude/settings.json
@@ -11,7 +11,7 @@ Jig's shared Claude Code harness, distributed as a plugin marketplace. See `docs
     "jig": {
       "source": {
         "source": "git",
-        "url": "https://git.example.com/TODO/jig-claude-harness.git"
+        "url": "https://github.com/xgourmandin/jig.git"
       }
     }
   },
@@ -23,6 +23,8 @@ Jig's shared Claude Code harness, distributed as a plugin marketplace. See `docs
 ```
 
 `bootstrap/jig-init [--marketplace-url URL|DIR] [--tofu] [--openwiki] [--no-install] [repo]` writes this plus `mise.toml`, `CLAUDE.md`, `docs/ai/ARCHITECTURE.md`, `.claude/rules/terraform.md`, first ADRs in `.archgate/adrs/`, and optionally enables `jig-openwiki` (a generated wiki refreshed locally by Claude Code). It never overwrites existing files. Every developer runs it once after cloning: it also runs `mise install` and `claude plugin install … --scope project`.
+
+The marketplace defaults to `https://github.com/xgourmandin/jig.git`. Pass `--marketplace-url` (or set `JIG_MARKETPLACE_URL`) to point at a fork, a mirror, or a local checkout of this repo — a directory is written as a `directory` marketplace source, which is how you test harness changes before tagging them.
 
 ### Run from the web
 

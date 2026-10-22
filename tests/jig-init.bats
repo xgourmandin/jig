@@ -13,6 +13,16 @@ setup() {
 add() { mkdir -p "$(dirname "$1")"; echo "${2:-x}" >"$1"; git add "$1"; }
 init() { bash "$INIT" --no-install "$@"; }
 enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
+# Stub the tools the per-developer install step calls, so it runs offline and
+# touches no per-user config; every `claude` invocation is appended to $CALLS.
+stub_claude() {
+  STUBS="$BATS_TEST_TMPDIR/stubs"; CALLS="$BATS_TEST_TMPDIR/claude.calls"
+  mkdir -p "$STUBS"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$STUBS/mise"
+  printf '#!/bin/bash\necho "$*" >>"%s"\n' "$CALLS" >"$STUBS/claude"
+  printf '#!/bin/bash\nexit 0\n' >"$STUBS/codebase-memory-mcp"
+  chmod +x "$STUBS"/mise "$STUBS"/claude "$STUBS"/codebase-memory-mcp
+}
 
 @test "tf-only repo: core + terraform, terraform tooling and ADRs" {
   add infra/main.tf
@@ -313,6 +323,41 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   [[ "$calls" == *"plugin marketplace add https://github.com/xgourmandin/jig.git"* ]]
   [[ "$calls" == *"plugin install jig-core@jig --scope project"* ]]
   [[ "$calls" == *"plugin install jig-terraform@jig --scope project"* ]]
+}
+
+@test "--marketplace-url overrides the default all the way to the install step" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" run bash "$INIT" --marketplace-url https://example.com/fork.git
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .extraKnownMarketplaces.jig.source.url .claude/settings.json)" = https://example.com/fork.git ]
+  grep -qF "plugin marketplace add https://example.com/fork.git" "$CALLS"
+  ! grep -qF "github.com/xgourmandin/jig.git" "$CALLS"
+  grep -qF "plugin install jig-core@jig --scope project" "$CALLS"
+}
+
+@test "JIG_MARKETPLACE_URL is honoured, and --marketplace-url wins over it" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" JIG_MARKETPLACE_URL=https://example.com/env.git run bash "$INIT"
+  [ "$status" -eq 0 ]
+  grep -qF "plugin marketplace add https://example.com/env.git" "$CALLS"
+  rm "$CALLS"
+  PATH="$STUBS:$PATH" JIG_MARKETPLACE_URL=https://example.com/env.git \
+    run bash "$INIT" --marketplace-url https://example.com/flag.git
+  [ "$status" -eq 0 ]
+  grep -qF "plugin marketplace add https://example.com/flag.git" "$CALLS"
+  ! grep -qF "env.git" "$CALLS"
+}
+
+@test "a local marketplace dir is installed from that dir, not the default URL" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" run bash "$INIT" --marketplace-url "$HARNESS"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .extraKnownMarketplaces.jig.source.source .claude/settings.json)" = directory ]
+  grep -qF "plugin marketplace add $HARNESS" "$CALLS"
+  ! grep -qF "github.com/xgourmandin/jig.git" "$CALLS"
 }
 
 @test "plugin install failures show claude's error" {

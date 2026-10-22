@@ -1,6 +1,6 @@
 # Jig Claude harness — instructions for Claude Code
 
-This repo is Jig's **Claude Code plugin marketplace**: the shared "company harness" every Jig repo uses for AI-assisted coding (software and Terraform). Read @docs/DESIGN.md for the why. The marketplace Git URL is not decided yet (placeholder in README.md).
+This repo is Jig's **Claude Code plugin marketplace**: the shared "company harness" every Jig repo uses for AI-assisted coding (software and Terraform). Read @docs/DESIGN.md for the why. The marketplace Git URL is `https://github.com/xgourmandin/jig.git` (the `DEFAULT_URL` in `bootstrap/jig-init`); `--marketplace-url`/`JIG_MARKETPLACE_URL` override it for local development.
 
 ## Layout
 

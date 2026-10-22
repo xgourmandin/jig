@@ -22,7 +22,7 @@
 
 ## Open questions (ask the human before the related phase)
 
-1. ~~Company name~~ → **jig** (answered 2026-09-23). Git URL that will host this marketplace: **not decided yet** (placeholder in README.md). _(Phase 0)_
+1. ~~Company name~~ → **jig** (answered 2026-09-23). ~~Git URL that will host this marketplace~~ → **`https://github.com/xgourmandin/jig.git`** (answered 2026-10-22); it is the `DEFAULT_URL` in `bootstrap/jig-init`, no longer a placeholder. `--marketplace-url`/`JIG_MARKETPLACE_URL` still override it (a directory becomes a `directory` marketplace source) for local development. _(Phase 0)_
 2. ~~Terraform or OpenTofu? Credentials?~~ → **both** Terraform and OpenTofu (detect per repo; guard both binaries). **Offline checks only**: hooks use `init -backend=false` + `validate` + static scanners; `plan` stays in CI (answered 2026-09-23). Cloud providers: not asked, not needed for offline checks. _(Phase 1)_
 3. ~~Pre-commit tooling~~ → **none yet**; CI runs `mise run lint`. Pick lefthook as the default when we add git hooks (answered 2026-09-23). _(Phase 1)_
 4. ~~Ticket system~~ → **skip for now**; no ticket linking in Phase 1 (answered 2026-09-23). _(Phase 1)_

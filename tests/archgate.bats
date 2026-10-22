@@ -6,6 +6,10 @@ TEMPLATES="$BATS_TEST_DIRNAME/../bootstrap/templates/archgate"
 setup() {
   command -v archgate >/dev/null || skip "archgate not installed (run mise install)"
   export ARCHGATE_TELEMETRY=0
+  # archgate picks its human console reporter when CI is set and machine-readable
+  # JSON otherwise. `review-context` has no --output flag, so clearing CI is the
+  # only way to pin the format these tests assert on. See the two format tests below.
+  unset CI
   REPO="$BATS_TEST_TMPDIR/repo"
   mkdir -p "$REPO/.archgate"
   cp -r "$TEMPLATES/." "$REPO/.archgate/"
@@ -33,6 +37,20 @@ module() { printf 'module "vpc" {\n  source = "%s"\n}\n' "$1" >main.tf; }
   module "./modules/vpc"
   run archgate check
   [ "$status" -eq 0 ]
+}
+
+@test "archgate reports in JSON, which every ADR assertion parses" {
+  module "git::https://git.example.com/infra/modules.git//vpc"
+  run archgate check
+  [ "$status" -eq 1 ]
+  jq -e . <<<"$output" >/dev/null
+}
+
+@test "a CI environment switches archgate off JSON (why setup unsets CI)" {
+  module "git::https://git.example.com/infra/modules.git//vpc"
+  CI=true run archgate check
+  [ "$status" -eq 1 ]
+  ! jq -e . <<<"$output" >/dev/null 2>&1
 }
 
 @test "all template ADRs parse" {

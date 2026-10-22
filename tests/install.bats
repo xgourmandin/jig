@@ -43,6 +43,30 @@ STUB
   grep -qx 'url=https://example.com/m.git' "$OUT"
 }
 
+@test "the clone URL it passes reaches jig-init's install step" {
+  # The real jig-init, so the URL install.sh exports is not silently skipped.
+  local harness="$BATS_TEST_DIRNAME/.."
+  cp "$harness/bootstrap/jig-init" "$harness/bootstrap/detect-stack.sh" "$FAKE/bootstrap/"
+  cp -r "$harness/bootstrap/templates" "$FAKE/bootstrap/templates"
+  cp "$harness/mise.toml" "$FAKE/mise.toml"
+  mkdir -p "$FAKE/.claude-plugin"
+  cp "$harness/.claude-plugin/marketplace.json" "$FAKE/.claude-plugin/"
+  git -C "$FAKE" add -A
+  git -C "$FAKE" -c user.name=t -c user.email=t@t commit -q -m real
+  stubs="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$stubs"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$stubs/mise"
+  printf '#!/bin/bash\necho "$*" >>"%s"\n' "$BATS_TEST_TMPDIR/claude.calls" >"$stubs/claude"
+  printf '#!/bin/bash\nexit 0\n' >"$stubs/codebase-memory-mcp"
+  chmod +x "$stubs"/mise "$stubs"/claude "$stubs"/codebase-memory-mcp
+  git init -q
+  echo x >main.tf
+  git add main.tf
+  PATH="$stubs:$PATH" run sh "$INSTALL"
+  [ "$status" -eq 0 ]
+  grep -qF "plugin marketplace add file://$FAKE" "$BATS_TEST_TMPDIR/claude.calls"
+  grep -qF "plugin install jig-core@jig --scope project" "$BATS_TEST_TMPDIR/claude.calls"
+}
+
 @test "JIG_HARNESS_REF pins a tag; unknown ref fails" {
   JIG_HARNESS_REF=v1 run sh "$INSTALL"
   [ "$status" -eq 0 ]

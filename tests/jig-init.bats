@@ -13,6 +13,16 @@ setup() {
 add() { mkdir -p "$(dirname "$1")"; echo "${2:-x}" >"$1"; git add "$1"; }
 init() { bash "$INIT" --no-install "$@"; }
 enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
+# Stub the tools the per-developer install step calls, so it runs offline and
+# touches no per-user config; every `claude` invocation is appended to $CALLS.
+stub_claude() {
+  STUBS="$BATS_TEST_TMPDIR/stubs"; CALLS="$BATS_TEST_TMPDIR/claude.calls"
+  mkdir -p "$STUBS"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$STUBS/mise"
+  printf '#!/bin/bash\necho "$*" >>"%s"\n' "$CALLS" >"$STUBS/claude"
+  printf '#!/bin/bash\nexit 0\n' >"$STUBS/codebase-memory-mcp"
+  chmod +x "$STUBS"/mise "$STUBS"/claude "$STUBS"/codebase-memory-mcp
+}
 
 @test "tf-only repo: core + terraform, terraform tooling and ADRs" {
   add infra/main.tf
@@ -95,6 +105,24 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   grep -q '"eslint ."' mise.toml
   grep -q '"prettier --check ."' mise.toml
   ! grep -q '"tsc --noEmit"' mise.toml
+}
+
+@test "ts repo with eslint but no flat config: starter eslint.config.mjs, existing one kept" {
+  add package.json '{"name":"x","devDependencies":{"eslint":"10"}}'
+  run init
+  [ -f eslint.config.mjs ]
+  grep -q 'typescript-eslint' eslint.config.mjs
+  grep -q '"eslint ."' mise.toml
+  echo '// mine' >eslint.config.mjs
+  init
+  [ "$(cat eslint.config.mjs)" = '// mine' ]
+}
+
+@test "ts repo with biome: no eslint config created" {
+  add package.json '{"name":"x"}'
+  add biome.json '{}'
+  init
+  [ ! -e eslint.config.mjs ]
 }
 
 @test "python + typescript: node pinned once" {
@@ -201,6 +229,29 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   [[ "$output" == *'todo     pin node and "npm:openwiki"'* ]]
 }
 
+@test "--openwiki runs 'openwiki integrations install claude' per developer" {
+  add main.tf
+  stubs="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$stubs"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$stubs/mise"
+  printf '#!/bin/bash\necho "$*" >"$BATS_TEST_TMPDIR/openwiki.args"\n' >"$stubs/openwiki"
+  chmod +x "$stubs"/*
+  PATH="$stubs:$PATH" run bash "$INIT" --openwiki
+  [ "$status" -eq 0 ]
+  [ "$(cat "$BATS_TEST_TMPDIR/openwiki.args")" = "integrations install claude" ]
+  [[ "$output" == *"openwiki integrations install claude"* ]]
+}
+
+@test "no openwiki integration without --openwiki, or with --no-install" {
+  add main.tf
+  stubs="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$stubs"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$stubs/mise"
+  printf '#!/bin/bash\ntouch "$BATS_TEST_TMPDIR/openwiki.called"\n' >"$stubs/openwiki"
+  chmod +x "$stubs"/*
+  PATH="$stubs:$PATH" run bash "$INIT"
+  PATH="$stubs:$PATH" run bash "$INIT" --openwiki --no-install
+  [ ! -e "$BATS_TEST_TMPDIR/openwiki.called" ]
+}
+
 @test "rejects bad options and non-git dirs" {
   run init --bogus
   [ "$status" -eq 64 ]
@@ -256,4 +307,65 @@ enabled() { jq -r '.enabledPlugins | keys | join(",")' .claude/settings.json; }
   run init
   [ "$status" -eq 0 ]
   ! compgen -G '.archgate/adrs/TS-*' >/dev/null
+}
+
+@test "plugin install runs with the default marketplace URL and adds the official marketplace" {
+  add main.tf
+  stubs="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$stubs"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$stubs/mise"
+  printf '#!/bin/bash\necho "$*" >>"$BATS_TEST_TMPDIR/claude.calls"\n' >"$stubs/claude"
+  chmod +x "$stubs"/*
+  PATH="$stubs:$PATH" run bash "$INIT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *placeholder* ]]
+  calls="$(cat "$BATS_TEST_TMPDIR/claude.calls")"
+  [[ "$calls" == *"plugin marketplace add anthropics/claude-plugins-official"* ]]
+  [[ "$calls" == *"plugin marketplace add https://github.com/xgourmandin/jig.git"* ]]
+  [[ "$calls" == *"plugin install jig-core@jig --scope project"* ]]
+  [[ "$calls" == *"plugin install jig-terraform@jig --scope project"* ]]
+}
+
+@test "--marketplace-url overrides the default all the way to the install step" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" run bash "$INIT" --marketplace-url https://example.com/fork.git
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .extraKnownMarketplaces.jig.source.url .claude/settings.json)" = https://example.com/fork.git ]
+  grep -qF "plugin marketplace add https://example.com/fork.git" "$CALLS"
+  ! grep -qF "github.com/xgourmandin/jig.git" "$CALLS"
+  grep -qF "plugin install jig-core@jig --scope project" "$CALLS"
+}
+
+@test "JIG_MARKETPLACE_URL is honoured, and --marketplace-url wins over it" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" JIG_MARKETPLACE_URL=https://example.com/env.git run bash "$INIT"
+  [ "$status" -eq 0 ]
+  grep -qF "plugin marketplace add https://example.com/env.git" "$CALLS"
+  rm "$CALLS"
+  PATH="$STUBS:$PATH" JIG_MARKETPLACE_URL=https://example.com/env.git \
+    run bash "$INIT" --marketplace-url https://example.com/flag.git
+  [ "$status" -eq 0 ]
+  grep -qF "plugin marketplace add https://example.com/flag.git" "$CALLS"
+  ! grep -qF "env.git" "$CALLS"
+}
+
+@test "a local marketplace dir is installed from that dir, not the default URL" {
+  add main.tf
+  stub_claude
+  PATH="$STUBS:$PATH" run bash "$INIT" --marketplace-url "$HARNESS"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .extraKnownMarketplaces.jig.source.source .claude/settings.json)" = directory ]
+  grep -qF "plugin marketplace add $HARNESS" "$CALLS"
+  ! grep -qF "github.com/xgourmandin/jig.git" "$CALLS"
+}
+
+@test "plugin install failures show claude's error" {
+  add main.tf
+  stubs="$BATS_TEST_TMPDIR/stubs"; mkdir -p "$stubs"
+  printf '#!/bin/bash\nif [ "$1" = exec ]; then shift 2; exec "$@"; fi\nexit 0\n' >"$stubs/mise"
+  printf '#!/bin/bash\n[ "$2" = install ] && { echo "boom: not cached" >&2; exit 1; }\nexit 0\n' >"$stubs/claude"
+  chmod +x "$stubs"/*
+  PATH="$stubs:$PATH" run bash "$INIT"
+  [[ "$output" == *"could not install jig-core@jig: boom: not cached"* ]]
 }

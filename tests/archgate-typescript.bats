@@ -319,7 +319,7 @@ passes() {
   fails 009-fail-component no-process-env-outside-bootstrap src/components/Banner.tsx 2
 }
 @test "TS-009 fails on process.env in a Vue SFC script" {
-  fails 009-fail-vue no-process-env-outside-bootstrap src/views/Home.vue 3
+  fails 009-fail-vue no-process-env-outside-bootstrap src/views/Home.vue 5
 }
 @test "TS-009 does not exempt a config.ts inside a ui directory" {
   fails 009-fail-ui-config no-process-env-outside-bootstrap src/components/config.ts 2

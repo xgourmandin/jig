@@ -4,9 +4,7 @@
     "name": "Jig Platform Team"
   },
   "description": "Jig company harness for Claude Code: shared rules, workflow state, guardrails and per-stack tooling.",
-  "allowCrossMarketplaceDependenciesOn": [
-    "claude-plugins-official"
-  ],
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "plugins": [
     {
       "name": "jig-core",
@@ -23,7 +21,7 @@
     {
       "name": "jig-openwiki",
       "source": "./plugins/jig-openwiki",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "description": "Opt-in generated repo wiki: OpenWiki driven locally by Claude Code, reviewed in a PR."
     },
     {

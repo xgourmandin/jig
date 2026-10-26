@@ -9,9 +9,9 @@ set -euo pipefail
 
 HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATES="$HARNESS/bootstrap/templates"
-PLACEHOLDER_URL="https://github.com/xgourmandin/jig.git"
+DEFAULT_URL="https://github.com/xgourmandin/jig.git"
 
-url="${JIG_MARKETPLACE_URL:-$PLACEHOLDER_URL}"
+url="${JIG_MARKETPLACE_URL:-$DEFAULT_URL}"
 tofu=0 openwiki=0 install=1 repo="."
 while (( $# )); do
   case "$1" in
@@ -64,7 +64,7 @@ ts_lint="" ts_prettier=0
 if (( has_ts )); then
   if compgen -G 'biome.json*' >/dev/null; then ts_lint=biome
   elif compgen -G 'eslint.config.*' >/dev/null || compgen -G '.eslintrc*' >/dev/null \
-       || jq -e 'has("eslintConfig")' package.json >/dev/null 2>&1; then ts_lint=eslint
+       || jq -e 'has("eslintConfig") or ((.devDependencies // {}) + (.dependencies // {}) | has("eslint"))' package.json >/dev/null 2>&1; then ts_lint=eslint
   fi
   if compgen -G '.prettierrc*' >/dev/null || compgen -G 'prettier.config.*' >/dev/null \
      || jq -e 'has("prettier") or ((.devDependencies // {}) + (.dependencies // {}) | has("prettier"))' package.json >/dev/null 2>&1; then
@@ -175,6 +175,11 @@ place "$TEMPLATES/CLAUDE.md" CLAUDE.md
 place "$TEMPLATES/docs-ai/ARCHITECTURE.md" docs/ai/ARCHITECTURE.md
 (( has_tf )) && place "$TEMPLATES/claude-rules/terraform.md" .claude/rules/terraform.md
 (( has_tf )) && place "$TEMPLATES/tflint/.tflint.hcl" .tflint.hcl
+# ESLint >= 9 only reads flat config: give eslint repos without one a starter.
+if [[ "$ts_lint" == eslint ]] && ! compgen -G 'eslint.config.*' >/dev/null; then
+  place "$TEMPLATES/eslint/eslint.config.mjs" eslint.config.mjs
+  say "note     eslint.config.mjs needs: npm i -D eslint @eslint/js typescript-eslint (move .eslintignore patterns into its ignores)"
+fi
 (( has_ts )) && [[ ! -d node_modules ]] \
   && say "note     run your package install (npm ci / pnpm i) so the TypeScript LSP finds tsserver"
 
@@ -210,14 +215,28 @@ if (( install )); then
   run=(); command -v mise >/dev/null && run=(mise exec --)
   "${run[@]}" codebase-memory-mcp config set ui_enabled false >/dev/null 2>&1 \
     && say "set      codebase-memory-mcp ui_enabled=false (per user)" || true
-  if [[ "$url" == "$PLACEHOLDER_URL" ]]; then
-    say "skipped  plugin install: the marketplace URL is still a placeholder (use --marketplace-url)"
-  elif ! command -v claude >/dev/null; then
+  # OpenWiki: register its Claude Code integration (user-level, once per developer).
+  if (( openwiki )); then
+    if "${run[@]}" openwiki integrations install claude >/dev/null 2>&1; then
+      say "set      openwiki integrations install claude (per user)"
+    else
+      say "warn     'openwiki integrations install claude' failed (is openwiki installed? run it by hand)"
+    fi
+  fi
+  if ! command -v claude >/dev/null; then
     say "skipped  plugin install: claude not on PATH"
   else
-    claude plugin marketplace add "$url" >/dev/null 2>&1 || true
+    # Stack plugins depend on LSP plugins from the official marketplace.
+    claude plugin marketplace add anthropics/claude-plugins-official >/dev/null 2>&1 || true
+    if ! out="$(claude plugin marketplace add "$url" 2>&1)"; then
+      say "warn     could not add marketplace $url: $out"
+    fi
     for p in "${plugins[@]}"; do
-      if claude plugin install "$p@jig" --scope project >/dev/null 2>&1; then say "installed $p@jig"; else say "warn     could not install $p@jig"; fi
+      if out="$(claude plugin install "$p@jig" --scope project 2>&1)"; then
+        say "installed $p@jig"
+      else
+        say "warn     could not install $p@jig: $out"
+      fi
     done
   fi
 fi

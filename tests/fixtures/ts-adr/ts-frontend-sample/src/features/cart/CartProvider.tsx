@@ -3,7 +3,13 @@ import type { CartService } from "@/application/add-to-cart";
 
 const Ctx = createContext<CartService | null>(null);
 
-export function CartProvider({ service, children }: { service: CartService; children: ReactNode }) {
+export function CartProvider({
+  service,
+  children,
+}: {
+  service: CartService;
+  children: ReactNode;
+}) {
   return <Ctx.Provider value={service}>{children}</Ctx.Provider>;
 }
 

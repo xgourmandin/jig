@@ -24,7 +24,7 @@ Rules:
 ## Splitting state (stacks)
 
 Everything in one state is planned, refreshed, locked and put at risk together. Split into several root modules when:
-- it grows beyond roughly 100 resources (Google suggests a few dozen), or plans get slow;
+- it nears 100 resources (Google: stay under 100, ideally a few dozen, since every run refreshes all of them), or plans get slow;
 - parts change at different rates (network and IAM rarely; applications often);
 - parts have different owners, blast radius or permissions (who can change prod networking vs. an app);
 - parts live in different accounts/projects or regions.
@@ -40,7 +40,7 @@ Don't split so fine that a single change needs coordinated applies across many s
 
 ## Environments
 
-- One directory per environment (and region) with its own backend and state, all calling the same versioned modules: `live/<env>/<region>/<stack>/`. Differences between environments are only in inputs (`terraform.tfvars`), never copy-pasted resources.
+- One directory per environment (and region) with its own backend and state, all calling the same versioned modules: `live/<env>/<region>/<stack>/`. Each environment directory has a `backend.tf` and a `main.tf` that instantiates the service module and re-exports its outputs. Common inputs are hard-coded in the module; differences between environments are only in `terraform.tfvars` (no `-var` or other var-files), never copy-pasted resources.
 - Don't use CLI workspaces to separate environments: they share one backend and credentials, and it's easy to apply to the wrong one. Keep each environment directory on the default workspace.
 - Separate backends (bucket/prefix and access policy) per environment, ideally separate cloud accounts/projects. Production state is writable only by the CI pipeline and break-glass roles.
 - Promote changes by bumping the module version per environment (dev, then staging, then prod), not by editing prod first.
@@ -53,19 +53,19 @@ Prefer, in order:
 2. **A published value** written by the producing stack to a parameter store/registry (`aws_ssm_parameter`, Consul, HCP `tfe_outputs`).
 3. **`terraform_remote_state`**, read-only and only for outputs meant as a contract. It needs read access to the whole other state (including its secrets), so use it sparingly and never across trust boundaries.
 
-Never copy IDs as literals between stacks.
+Only root module outputs are readable from other stacks, so root modules re-export the child outputs that matter. Never copy IDs as literals between stacks.
 
 ## State and backend
 
-- Remote backend with locking, versioning and encryption at rest (S3 with `use_lockfile = true` instead of DynamoDB locking on Terraform >= 1.10; GCS; azurerm; HCP Terraform). OpenTofu repos can add client-side state encryption.
+- Remote backend with locking, versioning and encryption at rest, never in git (GCS preferred on Google Cloud; S3 with `use_lockfile = true` instead of DynamoDB locking on Terraform >= 1.10; azurerm; HCP Terraform). Encrypt state even when it holds no secrets (GCS: customer-managed or supplied key). OpenTofu repos can add client-side state encryption.
 - One state key per stack per environment, derived from the directory path, so keys never collide.
-- State holds every attribute in plaintext: treat state read access as secret access.
+- State holds every attribute in plaintext: treat state read access as secret access; the state bucket is accessible only to the CI pipeline and a few admins.
 - No local state files, and no hand-editing state: use `moved`/`import`/`removed` blocks, applied by CI.
 
 ## Module versioning and sources
 
 - Local path (`./modules/x`) for modules used only inside this repo.
-- Modules shared across repos live in their own repo named `terraform-<provider>-<name>` (or a module monorepo with per-module tags) and are released with SemVer tags; consumers pin a version (`~> 2.1` for registry modules, `?ref=v2.1.0` for git).
+- Publish reusable modules to a registry (private registry for internal ones). Modules shared across repos live in their own repo named `terraform-<provider>-<name>` (or a module monorepo with per-module tags) and are released with SemVer tags; consumers pin the major (`~> 2.1` for registry modules, `?ref=v2.1.0` for git). Each shared module has a `CODEOWNERS` and PRs need owner approval.
 - Third-party modules: pin an exact version or commit SHA, review before upgrading, and prefer well-maintained ones (terraform-aws-modules, terraform-google-modules) over writing your own.
 - A shared module's `README.md`, `examples/` and `tests/` are its contract; removing a variable, renaming an output or forcing replacement is a major version bump, with `moved` blocks where possible.
 
@@ -89,9 +89,11 @@ Code and CI pipelines map one-to-one to root modules: a PR plans only the stacks
 
 ## Delivery
 
-- Every change goes through a PR: CI runs fmt, validate, tflint, a security scan (trivy/checkov), tests, and a plan per affected stack posted on the PR. Humans review the plan (see the `tf-plan-review` skill); CI applies after merge, from `main`.
-- Policies as code (OPA/Conftest, Sentinel, trivy custom checks) enforce tagging, sizing and security rules consistently.
-- Run drift detection (scheduled plan) on long-lived stacks; fix drift in code, not in the console.
+- Every change goes through a PR: CI runs fmt, validate, tflint, a security scan (trivy/checkov), tests, and a plan per affected stack, saved to a file and posted on the PR. Humans review the plan (see the `tf-plan-review` skill) and the infrastructure owner approves; CI applies that saved plan after merge, from `main`.
+- CI runs Terraform with the pipeline's own service account (workload identity federation outside Google Cloud), one account per scope with access limited to it. No service account keys. Local runs use application default credentials.
+- Policies as code (OPA/Conftest, Sentinel, `gcloud terraform vet`, trivy custom checks) validate the plan before apply and enforce tagging, sizing and security rules consistently.
+- Run drift detection (scheduled plan) and post-apply security audits on long-lived stacks; fix drift in code, not in the console.
+- Review version pins (Terraform, providers, modules) regularly, automated with Dependabot or Renovate.
 
 ## When proposing a design
 
@@ -100,6 +102,6 @@ State: the stacks (root modules) and what each owns, the modules they call (new 
 ## Sources
 
 - HashiCorp style guide (repo structure, environments, state sharing): https://developer.hashicorp.com/terraform/language/style
-- Google Cloud root modules and reusable modules: https://docs.cloud.google.com/docs/terraform/best-practices/root-modules, https://docs.cloud.google.com/docs/terraform/best-practices/reusable-modules
+- Google Cloud root modules, reusable modules, operations and security: https://docs.cloud.google.com/docs/terraform/best-practices/root-modules, https://docs.cloud.google.com/docs/terraform/best-practices/reusable-modules, https://docs.cloud.google.com/docs/terraform/best-practices/operations, https://docs.cloud.google.com/docs/terraform/best-practices/security
 - AWS Prescriptive Guidance (structure, backends): https://docs.aws.amazon.com/prescriptive-guidance/latest/terraform-aws-provider-best-practices/structure.html, https://docs.aws.amazon.com/prescriptive-guidance/latest/terraform-aws-provider-best-practices/backend.html
 - terraform-best-practices.com key concepts (resource module, infrastructure module, composition): https://www.terraform-best-practices.com/key-concepts

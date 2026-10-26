@@ -1,0 +1,65 @@
+name: CI
+
+# The harness holds itself to the same commands a developer runs:
+#   mise install && mise run test && mise run lint
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # mise refuses to read a config it has not been trusted with, and a fresh
+  # runner has no per-user trust store. Trust the checkout at project level
+  # instead of running `mise trust`.
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+  # `mise run lint` ends in `claude plugin validate`, so CI needs the CLI.
+  # Pinned like every tool in mise.toml; bump deliberately (validated 2026-10-22).
+  CLAUDE_CODE_VERSION: "2.1.308"
+  DISABLE_AUTOUPDATER: "1"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Sets up mise and the ~/.local/share/mise cache. `install: false` keeps
+      # `mise install` an explicit step, because installing the pinned tools on
+      # a clean machine is itself part of what this workflow checks.
+      - name: Set up mise
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          install: false
+
+      - name: mise install
+        run: mise install
+
+      - name: Install the Claude Code CLI
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s "$CLAUDE_CODE_VERSION"
+          echo "$HOME/.local/bin" >>"$GITHUB_PATH"
+
+      - name: Check the toolchain is complete
+        # Every bats suite skips itself when its tool is missing, so a run with
+        # a half-installed toolchain would pass while testing nothing.
+        run: |
+          claude --version
+          if mise ls --current | grep -F '(missing)'; then
+            echo "::error::mise install left tools missing; the test suite would silently skip them" >&2
+            exit 1
+          fi
+
+      - name: mise run test
+        run: mise run test
+
+      - name: mise run lint
+        run: mise run lint

@@ -10,4 +10,5 @@ Company-wide conventions come from the jig-terraform `terraform-conventions` ski
 
 - TODO: environments and where their root modules live (e.g. `envs/<env>/`)
 - TODO: naming prefix / tagging policy
-- TODO: modules that must not be changed without the platform team
+- TODO: modules that must not be changed without the platform team, and their `CODEOWNERS`
+- TODO: state backend (bucket, prefix, encryption key) and the CI identity that applies

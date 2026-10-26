@@ -22,7 +22,7 @@ Opt out for one block with a comment `# archgate-ignore TF-007/stateful-resource
 
 ### Do
 
-- `lifecycle { prevent_destroy = true }` plus `deletion_protection = true` on `aws_db_instance.this`
+- `lifecycle { prevent_destroy = true }` plus `deletion_protection = true` on `aws_db_instance.main`
 - `# archgate-ignore TF-007/stateful-resource-prevent-destroy reporting replica, rebuilt nightly` when the data is truly disposable
 
 ### Don't

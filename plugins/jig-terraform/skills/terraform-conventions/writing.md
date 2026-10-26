@@ -7,6 +7,7 @@ Companion to the `terraform-conventions` skill. Read the section you need.
 ```
 modules/storage/            # reusable (child) module
 ├── README.md
+├── CODEOWNERS              # shared modules: who approves PRs
 ├── main.tf                 # resources; module calls go here too
 ├── iam.tf                  # optional split once a concern passes ~150 lines
 ├── variables.tf            # alphabetical
@@ -15,10 +16,10 @@ modules/storage/            # reusable (child) module
 ├── locals.tf               # only if locals are shared across files
 ├── templates/policy.json.tftpl
 ├── tests/defaults.tftest.hcl
-└── examples/basic/         # a runnable root module that calls this one
+└── examples/basic/         # a runnable root module that calls this one, with its own README.md
 ```
 
-Root modules add `providers.tf` and `backend.tf`, and keep non-secret inputs in `terraform.tfvars`.
+Root modules add `providers.tf` and `backend.tf`, and keep non-secret inputs in `terraform.tfvars` (the only input channel: no `-var`, no other var-files). Only `*.tf`, `README.md` and `CHANGELOG.md` sit in the module root; extra docs go in `docs/`.
 
 `.gitignore`: `.terraform/`, `*.tfstate`, `*.tfstate.*`, `.terraform.tfstate.lock.info`, plan files (`*.tfplan`, `tfplan*`), `crash.log`, and any `.tfvars` holding secrets. Commit `.terraform.lock.hcl`.
 
@@ -103,12 +104,12 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
 }
 ```
 
-Avoid `count` over lists of distinct things: removing an element shifts indexes and replaces everything after it. Reference toggled resources with `one(aws_x.this[*].id)`.
+Avoid `count` over lists of distinct things: removing an element shifts indexes and replaces everything after it. Reference toggled resources with `one(aws_x.this[*].id)`. If the condition would read a resource attribute not known at plan time, Terraform fails with "count cannot be computed": use an explicit `enable_x` variable instead.
 
 ## Expressions
 
 - Split long expressions into named `locals`; one idea per local.
-- No nested ternaries. Use a lookup map (`local.sizes[var.environment]`) instead.
+- At most one ternary per line, never nested. Use a lookup map (`local.sizes[var.environment]`) or several locals instead.
 - `dynamic` blocks only when the number of nested blocks is driven by input; otherwise write them out.
 - Use `try()`/`can()` sparingly and never to hide real errors.
 - Long documents (policies, cloud-init) go in `templates/*.tftpl` with `templatefile()` or are built with `jsonencode()` / `aws_iam_policy_document`, not heredoc strings.
@@ -146,6 +147,7 @@ moved {
   to   = module.network.aws_vpc.this
 }
 
+# Only with approval: prefer creating the resource in Terraform and deleting the old one.
 import {
   to = aws_route53_zone.primary
   id = "Z0123456789ABCDEFGHIJ"
@@ -230,7 +232,7 @@ run "rejects_bad_retention" {
 }
 ```
 
-Run with `terraform test` / `tofu test`. Plan-only tests with mocked providers need no credentials, so they run in the session and in CI. Integration tests that create real resources run only in CI in an isolated account/project, with unique names (`random_id`) and cleanup.
+Run with `terraform test` / `tofu test`. Plan-only tests with mocked providers need no credentials, so they run in the session and in CI. Integration tests that create real resources run only in CI, one module per test, cheapest tests first and fail fast. Each run gets a fresh, isolated account/project and a dedicated service account, unique names (`random_id`/`random_string`), its own state, and `destroy` plus a cleanup of leftovers (e.g. `project_cleanup`, never in production).
 
 ## Static checks
 
@@ -239,6 +241,6 @@ Run with `terraform test` / `tofu test`. Plan-only tests with mocked providers n
 ## Sources
 
 - HashiCorp style guide: https://developer.hashicorp.com/terraform/language/style
-- Google Cloud Terraform best practices: https://docs.cloud.google.com/docs/terraform/best-practices/general-style-structure (and the reusable-modules, root-modules, dependency-management, security and testing pages)
+- Google Cloud Terraform best practices: https://docs.cloud.google.com/docs/terraform/best-practices/general-style-structure (and the reusable-modules, root-modules, operations, dependency-management, security and testing pages)
 - AWS Prescriptive Guidance, Terraform AWS provider best practices: https://docs.aws.amazon.com/prescriptive-guidance/latest/terraform-aws-provider-best-practices/structure.html
 - Ephemeral values / write-only arguments: https://developer.hashicorp.com/terraform/language/manage-sensitive-data/write-only, https://opentofu.org/docs/v1.11/language/ephemerality/
